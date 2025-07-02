@@ -14,5 +14,14 @@ public:
         motor2.setPWM(0);
     }
 
+
+    void clockwiseTurn() {
+      
+    }
+
+    void anticlockwiseTurn() {
+      
+    }
+
   }
 }

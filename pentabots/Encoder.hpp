@@ -18,6 +18,7 @@ public:
 
         // TODO: attach the interrupt on pin one such that it calls the readEncoderISR function on a rising edge
         attachInterrupt(digitalPinToInterrupt(encoder1_pin), readEncoderISR, RISING);
+        initRot = this->getRotation();
     }
 
 
@@ -60,6 +61,7 @@ public:
     volatile long count = 0;
     uint32_t prev_time;
     bool read = false;
+    float initRot;
 
 private:
     static Encoder* instance;

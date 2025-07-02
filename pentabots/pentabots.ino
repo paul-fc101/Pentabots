@@ -1,48 +1,65 @@
 #include "Encoder.hpp"
 #include "Motor.hpp"
+#include "EncoderOdometry.hpp"
 #include "PIDController.hpp"
+#include "IMUOdometry.hpp"
 #include "BangBangController.hpp"
+#include "Wire.h"
+#include "Turning.hpp"
+#include <MPU6050_light.h>
 
-#define MOT1PWM 9 // PIN 9 is a PWM pin
+MPU6050 mpu(Wire);
+
+#define EN_1_A 2 //These are the pins for the PCB encoder
+#define EN_1_B 7 //These are the pins for the PCB encoder
+#define EN_2_A 3 //These are the pins for the PCB encoder
+#define EN_2_B 8 //These are the pins for the PCB encoder
+#define MOT1PWM 9
 #define MOT1DIR 10
 #define MOT2PWM 11
 #define MOT2DIR 12
-mtrn3100::Motor motor(MOT1PWM,MOT1DIR);
-mtrn3100::Motor motor2(MOT2PWM,MOT2DIR);
 
-#define EN_A 2 // PIN 2 is an interupt
-#define EN_B 4
-#define FINAL_DIST 200
+mtrn3100::Encoder encoder(EN_1_A, EN_1_B,EN_2_A, EN_2_B);
+mtrn3100::Motor motor(MOT1PWM, MOT1DIR);
+mtrn3100::Motor motor2(MOT2PWM, MOT2DIR);
+mtrn3100::IMUOdometry IMU_odometry;
+mtrn3100::EncoderOdometry encoder_odometry(16, 94); //WHEEL RADIUS AND AXLE LENGTH
+
 #define WHEEL_DIAM 32
-#define MATH_PI 3.1415
-mtrn3100::Encoder encoder(EN_A, EN_B);
+unsigned long timer = 0;
+
 
 mtrn3100::BangBangController controller(120,0);
 
 
 void setup() {
-  Serial.begin(9600);
-  float numRotations = WHEEL_DIAM * MATH_PI / FINAL_DIST;
-  controller.zeroAndSetTarget(encoder.getRotation(), numRotations * 2 * MATH_PI);
-  controller.tune(1,0);
-  float b = controller.compute(encoder.getRotation());
-  motor.setPWM(0);
-  motor2.setPWM(0);
-  motor.setPWM(-b);
-  motor2.setPWM(b);
-  delay(1200);
-  motor.setPWM(0);
-  motor2.setPWM(0);
+  Serial.begin(115200);
+  Wire.begin();
+
+  //Set up the IMU
+  byte status = mpu.begin();
+  Serial.print(F("MPU6050 status: "));
+  Serial.println(status);
+  while(status!=0){ } // stop everything if could not connect to MPU6050
+  
+  Serial.println(F("Calculating offsets, do not move MPU6050"));
+  delay(1000);
+  mpu.calcOffsets(true,true);
+
+  con.zeroAndSetTarget(encoder.getLeftRotation(), 6.28);
+  Serial.println("Done!\n");
 }
 
 void loop() {
-  // float b = controller.compute(encoder.getRotation());
-  // motor.setPWM(b);
-  // motor2.setPWM(-b);
-  //Serial.println(controller.error);
-  //Serial.println(b);
-  // motor.setPWM(125);
-  // delay(1000);
-  // motor.setPWM(0);
-  // delay(3000);
+  mpu.update();
+  
+  if((millis()-timer)>10){ // print data every 10ms
+	// Serial.print("X : ");
+	// Serial.print(mpu.getAngleX());
+	// Serial.print("\tY : ");
+	// Serial.print(mpu.getAngleY());
+	Serial.print("Yaw : ");
+	Serial.println(mpu.getAngleZ());
+	timer = millis();  
+  }
 }

@@ -4,60 +4,68 @@
 
 namespace mtrn3100 {
 
-
 // The encoder class is a simple interface which counts and stores an encoders count.
 // Encoder pin 1 is attached to the interupt on the arduino and used to trigger the count.
 // Encoder pin 2 is attached to any digital pin and used to derrive rotation direction.
 // The count is stored as a volatile variable due to the high frequency updates. 
 class Encoder {
 public:
-    Encoder(uint8_t enc1, uint8_t enc2) : encoder1_pin(enc1), encoder2_pin(enc2) {
+    Encoder(uint8_t enc1, uint8_t enc2, uint8_t enc3, uint8_t enc4) : encoder1_int(enc1), encoder1_dir(enc2), encoder2_int(enc3), encoder2_dir(enc3) {
         instance = this;  // Store the instance pointer
-        pinMode(encoder1_pin, INPUT_PULLUP);
-        pinMode(encoder2_pin, INPUT_PULLUP);
+        pinMode(encoder1_int, INPUT_PULLUP);
+        pinMode(encoder1_dir, INPUT_PULLUP);
+        pinMode(encoder2_int, INPUT_PULLUP);
+        pinMode(encoder2_dir, INPUT_PULLUP);
 
         // TODO: attach the interrupt on pin one such that it calls the readEncoderISR function on a rising edge
-        attachInterrupt(digitalPinToInterrupt(encoder1_pin), readEncoderISR, RISING);
+        attachInterrupt(digitalPinToInterrupt(encoder1_int), readLeftEncoderISR, RISING);
+        attachInterrupt(digitalPinToInterrupt(encoder2_int), readRightEncoderISR, RISING);
     }
 
 
     // Encoder function used to update the encoder
-    void readEncoder() {
+    void readLeftEncoder() {
         noInterrupts();
+        direction = digitalRead(encoder1_dir) ? 1 : -1;
+        l_count += direction;
+        interrupts();
+    }
 
-        // NOTE: DO NOT PLACE SERIAL PRINT STATEMENTS IN THIS FUNCTION
-        // NOTE: DO NOT CALL THIS FUNCTION MANUALLY IT WILL ONLY WORK IF CALLED BY THE INTERRUPT
-        // TODO: Increase or Decrease the count by one based on the reading on encoder pin 2
-        if (encoder2_pin == 0) {
-            count--;
-        } else {
-            count++;
-        }
+    void readRightEncoder() {
+        noInterrupts();
+        direction = digitalRead(encoder2_dir) ? 1 : -1;
+        r_count += direction;
         interrupts();
     }
 
     // Helper function which to convert encouder count to radians
-    float getRotation() {
+    float getLeftRotation() {
+        return (static_cast<float>(l_count) / counts_per_revolution ) * 2* PI;
+    }
 
-        // TODO: Convert encoder count to radians
-
-        return (count / counts_per_revolution) * 2 * 3.1415;
+    float getRightRotation() {
+        return (static_cast<float>(r_count) / counts_per_revolution ) * 2* PI;
     }
 
 private:
-    static void readEncoderISR() {
+    static void readLeftEncoderISR() {
         if (instance != nullptr) {
-            instance->readEncoder();
+            instance->readLeftEncoder();
+        }
+    }
+    static void readRightEncoderISR() {
+        if (instance != nullptr) {
+            instance->readRightEncoder();
         }
     }
 
 public:
-    const uint8_t encoder1_pin;
-    const uint8_t encoder2_pin;
+    const uint8_t encoder1_int, encoder1_dir, encoder2_int, encoder2_dir;
     volatile int8_t direction;
     float position = 0;
     uint16_t counts_per_revolution = 729; //TODO: Identify how many encoder counts are in one rotation
-    volatile long count = 0;
+    volatile long l_count = 0;
+    volatile long r_count = 0;
     uint32_t prev_time;
     bool read = false;
 

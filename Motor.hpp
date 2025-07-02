@@ -22,7 +22,7 @@ public:
     void setPWM(int16_t pwm) {
         if (pwm >  0) {
             digitalWrite(dir_pin, HIGH);
-        
+
         } else {
             digitalWrite(dir_pin, LOW);
             pwm = -pwm;

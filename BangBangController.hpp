@@ -20,12 +20,11 @@ public:
         } else {
           output = 0;
         }
-        
 
         return output;
     }
 
-    // Function used to return the last calculated error. 
+    // Function used to return the last calculated error.
     // The error is the difference between the desired position and current position. 
     float getError() {
       return error;

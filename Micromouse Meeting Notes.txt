@@ -1,0 +1,14 @@
+Micromouse Meeting Notes
+- week 8 task - driving:
+	- lidar control for distance
+	- encoder wheel control
+	- stay 100mm away from a moving wall
+	- moving average filter for when wall is moving
+	- IMU for turning section
+		- 90 degree turn +/- 3 degrees
+		- up to 120 degree rotation and must return back to starting point
+	- chaining movement: 
+		- f for one box forwards (180mm), 
+		- l for 90 degree turn counter clockwise, 
+		- r for 90 degree turn clockwise
+		- use all 3 lidars to determine if walls are too close to turn

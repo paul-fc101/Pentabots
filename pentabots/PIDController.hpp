@@ -5,13 +5,13 @@
 namespace mtrn3100 {
 
 class PIDController {
-    
+
 public:
     PIDController(float kp, float ki, float kd) : kp(kp), ki(ki), kd(kd) {}
 
     // Compute the output signal required from the current/actual value.
     float compute(float input) {
-      
+
         curr_time = micros();
         dt = static_cast<float>(curr_time - prev_time) / 1e6;
         prev_time = curr_time;
@@ -60,7 +60,6 @@ private:
     float setpoint = 0;
     float zero_ref = 0;
 
-    
 };
 
 }  // namespace mtrn3100

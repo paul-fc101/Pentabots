@@ -29,9 +29,9 @@ public:
         // NOTE: DO NOT CALL THIS FUNCTION MANUALLY IT WILL ONLY WORK IF CALLED BY THE INTERRUPT
         // TODO: Increase or Decrease the count by one based on the reading on encoder pin 2
         if (encoder2_pin == 0) {
-            count--; 
+            count--;
         } else {
-            count++;     
+            count++;
         }
         interrupts();
     }

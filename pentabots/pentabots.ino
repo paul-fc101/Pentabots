@@ -47,16 +47,17 @@ void setup() {
   Serial.println(status);
   mpu.calcOffsets(); 
   initRot = mpu.getAngleZ();
-  
+  float currRot = initRot;
+  float prevRot = initRot;
+  float prev2Rot = initRot;
 }
 
 void loop() {
   mpu.update();
   float currRot = mpu.getAngleZ();
-  Serial.println(initRot);
-  Serial.println(currRot);
+  float accRot = (currRot + prevRot + prev2Rot) / 3;
 
-  int diff = currRot - initRot;
+  int diff = accRot - initRot;
   int pwm = 0;
 
   if (diff < -ROTTOL3) {
@@ -75,4 +76,7 @@ void loop() {
 
   motor.setPWM(pwm);
   motor2.setPWM(pwm);
+
+  prev2Rot = prevRot;
+  prevRot = currRot;
 }

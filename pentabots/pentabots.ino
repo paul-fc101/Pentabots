@@ -11,8 +11,14 @@
 #define MOT1DIR 10
 #define MOT2PWM 11
 #define MOT2DIR 12
-#define ROTTOL 0.5 // radians
-#define ROTSPEED 20
+// Rotation Tollerances in degrees
+#define ROTTOL1 0.1
+#define ROTTOL2 0.5
+#define ROTTOL2 3
+// Rotation Speeds
+#define ROTSPEED1 5
+#define ROTSPEED2 20
+#define ROTSPEED2 75
 
 // Initalise
 mtrn3100::Motor motor(MOT1PWM,MOT1DIR);
@@ -27,7 +33,6 @@ MPU6050 mpu(Wire);
 #define FINAL_DIST 200
 #define WHEEL_DIAM 32
 #define MATH_PI 3.1415
-//mtrn3100::Encoder encoder(EN_A, EN_B);
 mtrn3100::DualEncoder encoder(EN_1_A, EN_1_B, EN_2_A, EN_2_B);
 mtrn3100::BangBangController controller(120,0);
 float initRot;
@@ -43,45 +48,31 @@ void setup() {
   mpu.calcOffsets(); 
   initRot = mpu.getAngleZ();
   
-  // float numRotations = WHEEL_DIAM * MATH_PI / FINAL_DIST;
-//  controller.zeroAndSetTarget(encoder.getRotation(), numRotations * 2 * MATH_PI);
-//  controller.tune(1,0);
-//  
-//  float b = controller.compute(encoder.getRotation());
-////
-//  
-//  motor.setPWM(0);
-//  motor2.setPWM(0);
-//  motor.setPWM(b);
-//  motor2.setPWM(b);
-//  delay(1200);
-//  motor.setPWM(0);
-//  motor2.setPWM(0);
 }
 
 void loop() {
   mpu.update();
-  // float b = controller.compute(encoder.getRotation());
   float currRot = mpu.getAngleZ();
   Serial.println(initRot);
   Serial.println(currRot);
-  if (currRot < initRot - ROTTOL ) {
-    motor.setPWM(ROTSPEED);
-    motor2.setPWM(ROTSPEED);
-  } else if (currRot > initRot + ROTTOL) {
-    motor.setPWM(-ROTSPEED);
-    motor2.setPWM(-ROTSPEED);
-  } else if ((currRot >= initRot - ROTTOL) || (currRot <= initRot + ROTTOL)) {
-    motor.setPWM(0);
-    motor2.setPWM(0);
+
+  int diff = currRot - initRot;
+  int pwm = 0;
+
+  if (diff < -ROTTOL3) {
+    pwm = ROTSPEED3;
+  } else if (diff > ROTTOL3) {
+    pwm = -ROTSPEED3;
+  } else if (diff < -ROTTOL2) {
+    pwm = ROTSPEED2;
+  } else if (diff > ROTTOL2) {
+    pwm = -ROTSPEED2;
+  } else if (diff < -ROTTOL1) {
+    pwm = ROTSPEED1;
+  } else if (diff > ROTTOL1) {
+    pwm = -ROTSPEED1;
   }
-  
-  // motor.setPWM(b);
-  // motor2.setPWM(-b);
-  //Serial.println(controller.error);
-  //Serial.println(b);
-  // motor.setPWM(125);
-  // delay(1000);
-  // motor.setPWM(0);
-  // delay(3000);
+
+  motor.setPWM(pwm);
+  motor2.setPWM(pwm);
 }

@@ -13,7 +13,6 @@
 
 namespace mtrn3100 {
 
-// The Turning class is designed to control the turning of a robot using encoders and motors.
 class Turning {
 public:
     Turning(Motor mot1, Motor mot2, MPU6050& mpuRef)
@@ -36,8 +35,12 @@ public:
     // }
 
 
-    void turningCorrection() {
+    bool turningCorrection(bool isDriving) {
+      if (isDriving) {
+        return false;
+      }
       mpu.update();
+      bool changing = true;
       this->currRot = mpu.getAngleZ();
       Serial.println(initRot);
       Serial.println(currRot);
@@ -54,9 +57,15 @@ public:
         motor1.setPWM(-ROTSPEED);
         motor2.setPWM(-ROTSPEED);
       } else if ((currRot >= initRot - ROTTOL) || (currRot <= initRot + ROTTOL)) {
-        motor1.setPWM(0);
-        motor2.setPWM(0);
+        if (!isDriving) {
+          motor1.setPWM(0);
+          motor2.setPWM(0);
+        }
+       
+        changing = false;
       }
+
+      return changing;
     }
 
     // void anticlockwiseTurn(double angle) {

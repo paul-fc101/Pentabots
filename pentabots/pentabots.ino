@@ -4,9 +4,11 @@
 #include "BangBangController.hpp"
 #include "DualEncoder.hpp"
 #include "Turning.hpp"
+#include "Driving.hpp"
 
 #include "Wire.h"
 #include <MPU6050_light.h>
+#include <VL6180X.h>
 
 #define MOT1PWM 9 // PIN 9 is a PWM pin
 #define MOT1DIR 10
@@ -26,9 +28,13 @@ MPU6050 mpu(Wire);
 #define WHEEL_DIAM 32
 #define MATH_PI 3.1415
 //mtrn3100::Encoder encoder(EN_A, EN_B);
+VL6180X FrontSensor;
+
 mtrn3100::DualEncoder encoder(EN_1_A, EN_1_B, EN_2_A, EN_2_B);
 mtrn3100::BangBangController controller(120,0);
 mtrn3100::Turning turnController(motor, motor2, mpu);
+mtrn3100::Driving driveController(motor, motor2, FrontSensor);
+
 
 void setup() {
   Serial.begin(9600);
@@ -42,12 +48,24 @@ void setup() {
   Serial.println(status);
   mpu.calcOffsets();
   turnController.setMPUInitRot();
+
+
+  driveController.init();
 }
 
+
+bool isDriving = false;
+bool isTurning = true;
 void loop() {
-  turnController.turningCorrection();
+  // isDriving = driveController.drivingCorrection(isTurning);
+  // isTurning = turnController.turningCorrection(isDriving);
 
+  //driveController.drivingCorrection(false);
+  turnController.turningCorrection(false);
+  
 }
+
+
 
 
 

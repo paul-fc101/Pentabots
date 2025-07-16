@@ -33,6 +33,7 @@ public:
 
         analogWrite(pwm_pin, abs(pwm));
     }
+    
 
 private:
     const uint8_t pwm_pin;

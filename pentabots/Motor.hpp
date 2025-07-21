@@ -11,7 +11,6 @@ namespace mtrn3100 {
 class Motor {
 public:
     Motor(uint8_t pwm_pin, uint8_t in2) :  pwm_pin(pwm_pin), dir_pin(in2) {
-        // TODO: Set both pins as output
         pinMode(pwm_pin, OUTPUT);
         pinMode(dir_pin, OUTPUT); 
     }

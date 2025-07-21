@@ -11,12 +11,15 @@
 
 #include "EncoderOdometry.hpp"
 #include "DualEncoder.hpp"
+#include "PIDController.hpp"
 
-#define WHEEL_DIAM 32
+#define WHEEL_DIAM 31.5
 #define WHEEL_BASE 91
 #define RIGHT_CORRECT 1.031
 #define LEFT_CORRECT 1
-#define DIST_TOLLERANCE 2
+#define DIST_TOLLERANCE 1
+#define CELL_DIST 180
+
 
 mtrn3100::MovingAverageFilter filter;
 
@@ -25,7 +28,7 @@ namespace mtrn3100 {
 class Driving {
 public:
     Driving(Motor mot1, Motor mot2, VL6180X& senRef, DualEncoder& enc, EncoderOdometry& odom)
-        : motor1(mot1), motor2(mot2), FrontSensor(senRef), encoder(enc), encoderOdometer(odom) {
+        : motor1(mot1), motor2(mot2), FrontSensor(senRef), encoder(enc), encoderOdometer(odom), pidL(PIDController(1.5, 0.5, 0.6)), pidR(PIDController(1.5, 0.5, 0.6)) {
         motor1.setPWM(0);
         motor2.setPWM(0);
     }
@@ -38,86 +41,81 @@ public:
 
 
     void drive(int numCells) {
-      motor1.setPWM(150 * RIGHT_CORRECT);
-      motor2.setPWM(-150 * LEFT_CORRECT);
-      delay(880 * numCells);
-      motor1.setPWM(0);
-      motor2.setPWM(0);
+      // 1 Cell is 180 mm
+      // motor1.setPWM(150 * RIGHT_CORRECT);
+      // motor2.setPWM(-150 * LEFT_CORRECT);
+      // delay(880 * numCells);
+      // motor1.setPWM(0);
+      // motor2.setPWM(0);
+
+      encoderOdometer.update(
+          encoder.getLeftRotation(),
+          encoder.getRightRotation()
+      );
+      //Serial.println("A");
+
+      float leftDist = encoder.getLeftDistance(WHEEL_DIAM / 2.0);
+      float rightDist = encoder.getRightDistance(WHEEL_DIAM / 2.0);
+      float startLeft = leftDist;
+      float startRight = rightDist;
+      pidL.zeroAndSetTarget(leftDist, leftDist + CELL_DIST * numCells);
+      pidR.zeroAndSetTarget(rightDist, rightDist - CELL_DIST * numCells);
+      // Serial.println(leftDist);
+      // Serial.println(rightDist);
+      // Serial.println("");
+
+      float MaxEndL = DIST_TOLLERANCE + startLeft + CELL_DIST * numCells;
+      float MinEndL = - DIST_TOLLERANCE + startLeft + CELL_DIST * numCells;
+      float MaxEndR = DIST_TOLLERANCE + startRight - CELL_DIST * numCells;
+      float MinEndR = - DIST_TOLLERANCE + startRight - CELL_DIST * numCells;
+
+      while (
+        leftDist < MinEndL
+        || rightDist < MinEndR
+        || leftDist > MaxEndL
+        || rightDist > MaxEndR
+      ) {
+        //Serial.println("B");
+        encoderOdometer.update(
+            encoder.getLeftRotation(),
+            encoder.getRightRotation()
+        );
+
+        leftDist = encoder.getLeftDistance(WHEEL_DIAM / 2.0);
+        rightDist = encoder.getRightDistance(WHEEL_DIAM / 2.0);
+
+        //Serial.println(leftDist);
+        float correctionL = pidL.compute(leftDist);
+
+        //Serial.println(rightDist);
+        float correctionR = pidR.compute(rightDist);
+        
+        //Serial.println("");
+
+        if (leftDist < MinEndL || leftDist > MaxEndL) {
+          if (correctionL < 0 && correctionL > -15) {
+            motor2.setPWM(15);
+          } else if (correctionL > 0 && correctionL < 15) {
+            motor2.setPWM(-15);
+          } else {
+            motor2.setPWM(-correctionL);
+          }
+        } else {
+          motor2.setPWM(0);
+        }
+        if (rightDist < MinEndR || rightDist > MaxEndR) {
+          if (correctionR < 0 && correctionR > -15) {
+            motor1.setPWM(15);
+          } else if (correctionR > 0 && correctionR < 15) {
+            motor1.setPWM(-15);
+          } else {
+            motor1.setPWM(-correctionR);
+          }
+        } else {
+          motor1.setPWM(0);
+        }
+      }
     }
-
-    // void drive(int numCells) {
-    //   float target = numCells * 180;
-
-    //   // Reset encoder odometry
-    //   encoderOdometer.reset();
-
-    //   Serial.println(encoderOdometer.getDistance());
-    //   Serial.println(target);
-
-    //   while (encoderOdometer.getDistance() < target - DIST_TOLLERANCE) {
-    //       encoderOdometer.update(
-    //           encoder.getLeftDistance(WHEEL_DIAM / 2),
-    //           encoder.getRightDistance(WHEEL_DIAM / 2)
-    //       );
-
-    //       float remaining = target - encoderOdometer.getDistance();
-    //       Serial.println(remaining);
-    //       int pwm = 150;
-          
-    //       if (remaining < 50) {
-    //           pwm = max(20, (int)(150 * remaining / 50));
-    //       }
-
-    //       motor1.setPWM(pwm);
-    //       motor2.setPWM(-pwm);
-    //   }
-
-    //   motor1.setPWM(0);
-    //   motor2.setPWM(0);
-    // }
-
-    // void drive(int numCells) {
-    //     float target = numCells * 180.0;
-        
-    //     encoderOdometer.reset();
-        
-    //     Serial.print("Target: "); Serial.println(target);
-        
-    //     unsigned long lastUpdate = 0;
-    //     const unsigned long UPDATE_INTERVAL = 5;
-        
-    //     while (encoderOdometer.getDistance() < target) {
-    //         encoder.readLeftEncoder();
-    //         encoder.readRightEncoder();
-    //         if (millis() - lastUpdate >= UPDATE_INTERVAL) {
-                
-    //             Serial.println(encoder.getLeftDistance(WHEEL_DIAM / 2));
-    //             Serial.println(encoder.getRightDistance(WHEEL_DIAM / 2));
-
-    //             encoderOdometer.update(
-    //                 encoder.getLeftDistance(WHEEL_DIAM / 2),
-    //                 encoder.getRightDistance(WHEEL_DIAM / 2)
-    //             );
-                
-    //             float remaining = target - encoderOdometer.getDistance();
-    //             Serial.println(remaining);
-    //             int pwm = 150;
-                
-    //             if (remaining < 50) {
-    //                 pwm = max(20, (int)(150 * remaining / 50));
-    //             }
-                
-    //             motor1.setPWM(pwm * RIGHT_CORRECT);
-    //             motor2.setPWM(-pwm * LEFT_CORRECT);
-                
-    //             lastUpdate = millis();
-    //         }
-    //     }
-        
-    //     motor1.setPWM(0);
-    //     motor2.setPWM(0);
-        
-    // }
 
     bool drivingCorrection(bool isTurning) {
       if (isTurning) {
@@ -143,15 +141,42 @@ public:
       }
       return true;
     }
+    
+  //   bool drivingCorrection(bool isTurning) {
+  //   if (isTurning) return false;
 
+  //   encoderOdometer.update(
+  //       encoder.getLeftRotation(),
+  //       encoder.getRightRotation()
+  //   );
+
+  //   float leftDist = encoder.getLeftDistance(WHEEL_DIAM / 2.0);
+  //   float rightDist = encoder.getRightDistance(WHEEL_DIAM / 2.0);
+    
+  //   float correctionL = pidL.compute(leftDist);
+  //   float correctionR = pidR.compute(rightDist);
+  //   Serial.println(correctionL);
+  //   Serial.println(correctionR);
+
+  //   int baseSpeed = 200;
+  //   int leftPWM = baseSpeed - correctionL;
+  //   int rightPWM = -(baseSpeed + correctionR);
+  //   //int rightPWM = -baseSpeed + correctionR;
+
+  //   motor1.setPWM(leftPWM);
+  //   motor2.setPWM(rightPWM);
+
+  //   return fabs(leftDist) > DIST_TOLLERANCE || fabs(rightDist) > DIST_TOLLERANCE;
+  // }
 
 private:
     VL6180X FrontSensor;
     DualEncoder& encoder;
     EncoderOdometry& encoderOdometer;
-    Motor motor1;
-    Motor motor2;
-
+    Motor motor1; // Right Motor
+    Motor motor2; // Left Motor
+    PIDController pidR;
+    PIDController pidL;
 };
 }
 

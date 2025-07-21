@@ -52,7 +52,7 @@ void MovementString(String command) {
       // clockwise
       turnController.turn(-90);
     }
-    delay(100);
+    delay(150);
   }
 }
 
@@ -60,28 +60,17 @@ void setup() {
   Serial.begin(9600);
 
   Wire.begin();
-  byte status = mpu.begin();
   delay(200);
   turnController.attachMPU();
 
-  Serial.print(F("MPU6050 status: "));
-  Serial.println(status);
-  delay(300);
-  mpu.calcOffsets();
-
   turnController.setMPUInitRot();
   // Uncomment for Task 3.2
-  // turnController.turn(90);
+  turnController.turn(90);
   
-  
-
-
   driveController.init();
 
   // Task 3.3
-  MovementString("flfrfrf");
-
-  
+ // MovementString("flflflflfrfrfrfrf");
 }
 
 bool isDriving = false;
@@ -94,5 +83,5 @@ void loop() {
   //driveController.drivingCorrection(false);
 
   // Task 3.2 - Turning
-  //turnController.turningCorrection(false);
+  turnController.turningCorrection(false);
 }

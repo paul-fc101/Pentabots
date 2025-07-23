@@ -12,7 +12,6 @@ public:
     float compute(float input) {
         error = setpoint - (input - zero_ref);
 
-        // TODO: IMPLIMENT BANG BANG CONTROLLER - REFER TO THE TUTORIAL SLIDES
         if (error < deadband) {
           output = speed;
         } else if (error > deadband) {

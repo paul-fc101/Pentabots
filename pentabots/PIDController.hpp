@@ -27,10 +27,6 @@ public:
         derivative = (error - prev_error) / dt;
         output = kp * error + ki * integral + kd * derivative;
 
-        // Serial.print("error ");
-        // Serial.println(error);
-        // Serial.print("output ");
-        // Serial.println(output);
         prev_error = error;
         return output;
     }

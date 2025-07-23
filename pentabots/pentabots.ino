@@ -14,11 +14,6 @@
 #define MOT2PWM 11
 #define MOT2DIR 12
 
-// Initalise
-mtrn3100::Motor motor(MOT1PWM, MOT1DIR);
-mtrn3100::Motor motor2(MOT2PWM, MOT2DIR);
-MPU6050 mpu(Wire);
-
 // These are the pins for the PCB encoder
 #define EN_1_A 2
 #define EN_1_B 7
@@ -29,6 +24,11 @@ MPU6050 mpu(Wire);
 #define FINAL_DIST 200
 #define WHEEL_DIAM 32
 #define WHEEL_BASE 91
+
+// Initalise
+mtrn3100::Motor motor(MOT1PWM, MOT1DIR);
+mtrn3100::Motor motor2(MOT2PWM, MOT2DIR);
+MPU6050 mpu(Wire);
 
 VL6180X FrontSensor;
 mtrn3100::DualEncoder encoder(EN_1_A, EN_1_B, EN_2_A, EN_2_B);
@@ -65,23 +65,21 @@ void setup() {
 
   turnController.setMPUInitRot();
   // Uncomment for Task 3.2
-  turnController.turn(90);
+  //turnController.turn(90);
   
   driveController.init();
 
   // Task 3.3
- // MovementString("flflflflfrfrfrfrf");
+  MovementString("lfrffrfl");
 }
 
 bool isDriving = false;
 bool isTurning = true;
 void loop() {
-  // isDriving = driveController.drivingCorrection(isTurning);
-  // isTurning = turnController.turningCorrection(isDriving);
 
   // Task 3.1 - Driving
   //driveController.drivingCorrection(false);
 
   // Task 3.2 - Turning
-  turnController.turningCorrection(false);
+  //turnController.turningCorrection(false);
 }

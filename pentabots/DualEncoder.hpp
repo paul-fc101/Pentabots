@@ -28,7 +28,7 @@ public:
     
     void readRightEncoder() {
         noInterrupts();
-        direction = digitalRead(mot2_dir) ? 1 : -1;
+        direction = digitalRead(mot2_dir) ? -1 : 1; 
         r_count += direction;
         interrupts();
     }
@@ -68,7 +68,7 @@ public:
     const uint8_t mot1_int,mot1_dir,mot2_int,mot2_dir;
     volatile int8_t direction;
     float position = 0;
-    uint16_t counts_per_revolution = 690;
+    uint16_t counts_per_revolution = 700;
     volatile long l_count = 0;
     volatile long r_count = 0;
     uint32_t prev_time;

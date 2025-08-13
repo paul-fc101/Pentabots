@@ -2,6 +2,8 @@
 
 #include <math.h>
 
+#define I_MAX 40.0
+
 namespace mtrn3100 {
 
 class PIDController {
@@ -24,6 +26,12 @@ public:
         error = setpoint - current_value;
 
         integral += error * dt;
+        if (integral > I_MAX) {
+            integral = I_MAX;
+        } else if (integral < -I_MAX) {
+            integral = -I_MAX;
+        }
+        
         derivative = (error - prev_error) / dt;
         output = kp * error + ki * integral + kd * derivative;
 
@@ -54,15 +62,19 @@ public:
         prev_time = micros();
     }
 
+    void addToTarget(float target) {
+        setpoint = setpoint + target;
+    }
+
 public:
     uint32_t prev_time, curr_time = micros();
     float dt = 0.0;
+    float setpoint = 0;
 
 private:
     float kp, ki, kd;
     float error = 0, derivative = 0, integral = 0, output = 0;
     float prev_error = 0;
-    float setpoint = 0;
     float zero_ref = 0;
 };
 

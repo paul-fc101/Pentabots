@@ -4,6 +4,7 @@
 
 #include "Wire.h"
 #include <MPU6050_light.h>
+#include <VL6180X.h>
 
 #include "Motor.hpp"
 #include "MovingAverageFilter.hpp"
@@ -23,10 +24,23 @@ namespace mtrn3100 {
 
 class Turning {
 public:
-    Turning(Motor mot1, Motor mot2, MPU6050& mpuRef)
-        : motor1(mot1), motor2(mot2), mpu(mpuRef), pid(PIDController(1.8, 0.7, 0.3)) {
+    Turning(Motor& mot1, Motor& mot2, MPU6050& mpuRef, VL6180X& frontSen, VL6180X& leftSen, VL6180X& rightSen)
+        : motor1(mot1), motor2(mot2), mpu(mpuRef), 
+          pid(PIDController(1.8, 0.7, 0.3)),
+          pidCenterH(PIDController(0.8, 0.0, 0.2)), // PID for horizontal (pivot) centering
+          pidCenterV(PIDController(1.2, 0.1, 0.3)), // PID for vertical (fwd/back) centering
+          FrontSensor(frontSen), LeftSensor(leftSen), RightSensor(rightSen) 
+    {
         motor1.setPWM(0);
         motor2.setPWM(0);
+    }
+
+    void centerRobot() {
+        //centerVertically();
+        //delay(50);
+        centerHorizontally();
+        motor1.stop();
+        motor2.stop();
     }
 
     void setMPUInitRot() {
@@ -113,26 +127,132 @@ public:
 
         if (fabs(pid.getError()) < ROTTOL) {
             isTurning = false;
-            motor1.setPWM(0);
-            motor2.setPWM(0);
+            motor1.stop();
+            motor2.stop();
         }
 
       }
-}
+      motor1.stop();
+      motor2.stop();
+    }
 
+    void getLidar(VL6180X front, VL6180X left, VL6180X right) {
+        FrontSensor = front;
+        LeftSensor = left;
+        RightSensor = right;
+    }
 
 private:
+
+    void centerHorizontally() {
+        const uint8_t CENTER_TOLERANCE = 1;
+        const uint8_t WALL_MAX_DIST = 140;
+        pidCenterH.zeroAndSetTarget(0, 0);
+
+        float li_L = LeftSensor.readRangeSingleMillimeters();
+        float li_R = RightSensor.readRangeSingleMillimeters();
+        float li_F = FrontSensor.readRangeSingleMillimeters();
+        if (li_F < 55) {
+          while (li_F < 55) {
+            li_F = FrontSensor.readRangeSingleMillimeters();
+            motor2.setPWM(30);
+            motor1.setPWM(-30);
+          }
+          motor2.stop();
+          motor1.stop();
+        }
+        if (li_R < WALL_MAX_DIST || li_L < WALL_MAX_DIST ) {
+          if (li_R <= 35) {
+            moveLeftForwardBack();
+          } else if (li_L <= 35) {
+            moveRightForwardBack();
+          }
+        }
+
+        motor1.stop();
+        motor2.stop();
+    }
+
+    void centerVertically() {
+        // const float TARGET_DIST_FROM_WALL = 60.0;
+        // const float CENTER_TOLERANCE = 2.0;
+        // pidCenterV.zeroAndSetTarget(0, TARGET_DIST_FROM_WALL);
+
+        // long startTime = millis();
+        // while (millis() - startTime < 1500) {
+        //     float li_F = FrontSensor.readRangeSingleMillimeters();
+
+        //     if (li_F < 180) {
+        //         if (fabs(li_F - TARGET_DIST_FROM_WALL) < CENTER_TOLERANCE) {
+        //             motor1.stop();
+        //             motor2.stop();
+        //             return; // Success
+        //         }
+
+        //         float correction = pidCenterV.compute(li_F);
+        //         motor1.setTargetPWM(correction);
+        //         motor2.setTargetPWM(-correction); 
+        //     } else {
+        //         break;
+        //     }
+        //     motor1.update();
+        //     motor2.update();
+        //     delay(5);
+        // }
+        // motor1.stop();
+        // motor2.stop();
+    }
+
+
+    void moveLeftForwardBack() {
+      motor2.setPWM(-50);
+      motor1.setPWM(50);
+      delay(300);
+      motor1.setPWM(50);
+      motor2.setPWM(50);
+      delay(400);
+      motor2.setPWM(-50);
+      motor1.setPWM(0);
+      delay(720);
+      motor2.setPWM(50);
+      motor1.setPWM(-50);
+      delay(600);
+      motor1.setPWM(0);
+      motor2.setPWM(0);
+    }
+
+    void moveRightForwardBack() {
+      motor2.setPWM(-50);
+      motor1.setPWM(50);
+      delay(300);
+      motor1.setPWM(-50);
+      motor2.setPWM(-50);
+      delay(400);
+      motor1.setPWM(50);
+      motor2.setPWM(0);
+      delay(720);
+      motor1.setPWM(-50);
+      motor2.setPWM(50);
+      delay(600);
+      motor1.setPWM(0);
+      motor2.setPWM(0);
+    }
+
+
     MPU6050 mpu;
-    Motor motor1;
-    Motor motor2;
+    Motor motor1; // Right Motor
+    Motor motor2; // Left Motor
     float initRot;
     float desiredRot;
     float currRot;
     long lastUpdate = 0;
     int numOffset;
-    PIDController pid;
+    PIDController pid, pidCenterH, pidCenterV;
     float drift;
     float prevTime;
+    VL6180X FrontSensor;
+    VL6180X LeftSensor;
+    VL6180X RightSensor;
 };
 }
 

@@ -6,8 +6,8 @@
 #include "EncoderOdometry.hpp"
 
 #define MAZE_SIZE 9
-#define WALL_THRESHOLD 100  // Distance in mm to consider a wall present
-#define UNVISITED_PENALTY 1000  // Large penalty for unvisited cells
+#define WALL_THRESHOLD 100 
+#define UNVISITED_PENALTY 1000  
 
 namespace mtrn3100 {
 
@@ -29,7 +29,6 @@ public:
     uint8_t goalCol = 7;
     
     void initialize() {
-        // Set outer walls
         for(int i=0; i<MAZE_SIZE; i++) {
             grid[0][i].walls[NORTH] = true;
             grid[MAZE_SIZE-1][i].walls[SOUTH] = true;
@@ -81,8 +80,7 @@ public:
 
 class AutonomousMapper {
 public:
-    AutonomousMapper(Driving& drive, Turning& turn, EncoderOdometry& odom,
-                    uint8_t startRow, uint8_t startCol, uint8_t goalRow, uint8_t goalCol) 
+    AutonomousMapper(Driving& drive, Turning& turn, EncoderOdometry& odom, uint8_t startRow, uint8_t startCol, uint8_t goalRow, uint8_t goalCol) 
         : driver(drive), turner(turn), odometer(odom) {
         maze.startRow = startRow;
         maze.startCol = startCol;
@@ -97,23 +95,16 @@ public:
         currentDir = NORTH;
         
         while(maze.completion < 95.0) { // Until mostly mapped
-            // Update current cell walls from sensors
             updateWalls();
             
-            // Choose next move
             uint8_t nextDir = chooseNextDirection();
-            
-            // Execute move
             moveToCell(nextDir);
-            
-            // Update completion and display
             maze.updateCompletion();
             //maze.display();
             
-            delay(500); // For debugging
+            delay(500); /
         }
         
-        // Return to start
         returnToStart();
     }
     
@@ -148,12 +139,10 @@ private:
             current.walls[(currentDir + 3) % 4] = false;
         }
         
-        // Mark as visited
         current.visited = true;
     }
     
     uint8_t chooseNextDirection() {
-        // Simple wall-follower with preference for unvisited cells
         Cell& current = maze.grid[currentRow][currentCol];
         
         // Check adjacent cells
@@ -194,7 +183,6 @@ private:
     }
     
     void moveToCell(uint8_t dir) {
-        // Calculate required turn
         int8_t turnAngle = (dir - currentDir) * 90;
         if(turnAngle > 180) turnAngle -= 360;
         if(turnAngle < -180) turnAngle += 360;
@@ -204,10 +192,8 @@ private:
             currentDir = dir;
         }
         
-        // Move forward one cell
         driver.drive(1);
         
-        // Update position
         switch(currentDir) {
             case NORTH: currentRow--; break;
             case EAST: currentCol++; break;
@@ -267,12 +253,11 @@ private:
         while(currentRow != maze.goalRow || currentCol != maze.goalCol) {
             Cell& current = maze.grid[currentRow][currentCol];
             
-            // Find direction with smallest distance
             uint8_t bestDir = currentDir;
             uint16_t bestDist = current.distance;
             
             for(int d=0; d<4; d++) {
-                if(!current.walls[d]) { // No wall in this direction
+                if(!current.walls[d]) { 
                     int8_t ni = currentRow, nj = currentCol;
                     switch(d) {
                         case NORTH: ni--; break;
@@ -290,17 +275,15 @@ private:
                 }
             }
             
-            // Move to best direction
             moveToCell(bestDir);
-            delay(500); // For observation
+            delay(500); 
         }
     }
     
     void returnToStart() {
         // Simple implementation - could use flood fill to find path back
         while(currentRow != maze.startRow || currentCol != maze.startCol) {
-            // Similar to followShortestPath but with start as goal
-            // Implement your preferred return logic here
+            //// Implement function
         }
     }
 

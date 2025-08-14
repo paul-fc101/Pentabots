@@ -3,6 +3,7 @@
 #include "Turning.hpp"
 #include "Driving.hpp"
 #include "EncoderOdometry.hpp"
+#include "Mapping.hpp"
 
 #include "Wire.h"
 #include <MPU6050_light.h>
@@ -27,6 +28,9 @@
 
 #define RANGE 1
 
+const int START_R = 0, START_C = 0;                
+const int GOAL_R  = 4, GOAL_C  = 7; 
+
 // Initalise
 mtrn3100::Motor motor(MOT1PWM, MOT1DIR);
 mtrn3100::Motor motor2(MOT2PWM, MOT2DIR);
@@ -38,6 +42,8 @@ mtrn3100::DualEncoder encoder(EN_1_A, EN_1_B, EN_2_A, EN_2_B);
 mtrn3100::EncoderOdometry encoderOdometer(WHEEL_DIAM / 2, WHEEL_BASE);
 mtrn3100::Driving driveController(motor, motor2, FrontSensor, LeftSensor, RightSensor, encoder, encoderOdometer);
 mtrn3100::Turning turnController(motor, motor2, mpu, FrontSensor, LeftSensor, RightSensor);
+mtrn3100::AutonomousMapper mapper(driveController, turnController, encoderOdometer, START_R, START_C, GOAL_R, GOAL_C);
+
 
 void MovementString(String command) {
   for (int i = 0; i < command.length(); ++i) {
@@ -76,11 +82,19 @@ void setup() {
 
   turnController.getLidar(FrontSensor, LeftSensor, RightSensor);
 
+  mapper.exploreMaze();
+  mapper.solveShortestPath();
+
+  
+
   //Uncomment for Task 3.2
   //turnController.turn(90);
 
   // Task 3.3
-  MovementString("ffrflflfffflflfrfflffl");
+  MovementString(F("ffrflflfffflflfrfflffl"));
+
+  // Task 4.3
+
 }
 
 bool isDriving = false;

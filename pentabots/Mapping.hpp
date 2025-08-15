@@ -1,299 +1,134 @@
 #pragma once
-
 #include <Arduino.h>
+#include <VL6180X.h>
 #include "Driving.hpp"
 #include "Turning.hpp"
-#include "EncoderOdometry.hpp"
 
-#define MAZE_SIZE 9
-#define WALL_THRESHOLD 100 
-#define UNVISITED_PENALTY 1000  
+#define SIZE 9          // 9x9 maze
+#define LARGEVAL 255
+#define VISITED_FLAG 1
 
 namespace mtrn3100 {
 
-enum Direction { NORTH, EAST, SOUTH, WEST };
-
-struct Cell {
-    bool visited = false;
-    bool walls[4] = {true, true, true, true};
-    uint16_t distance = 0;
+struct Node {
+  short row, column;
+  short floodval;
+  bool visited;
+  bool wallUp, wallDown, wallLeft, wallRight;
+  Node *up, *down, *left, *right;
 };
 
-class MazeMap {
-public:
-    Cell grid[MAZE_SIZE][MAZE_SIZE];
-    float completion = 0.0;
-    uint8_t startRow = 0;
-    uint8_t startCol = 0;
-    uint8_t goalRow = 4;
-    uint8_t goalCol = 7;
-    
-    void initialize() {
-        for(int i=0; i<MAZE_SIZE; i++) {
-            grid[0][i].walls[NORTH] = true;
-            grid[MAZE_SIZE-1][i].walls[SOUTH] = true;
-            grid[i][0].walls[WEST] = true;
-            grid[i][MAZE_SIZE-1].walls[EAST] = true;
-        }
-    }
-    
-    void updateCompletion() {
-        int visited = 0;
-        for(int i=0; i<MAZE_SIZE; i++) {
-            for(int j=0; j<MAZE_SIZE; j++) {
-                if(grid[i][j].visited) visited++;
-            }
-        }
-        completion = (visited * 100.0) / (MAZE_SIZE * MAZE_SIZE);
-    }
-
-    // void display() {
-    //     Serial.print("Mapping: ");
-    //     Serial.print(completion);
-    //     Serial.println("% complete");
-        
-    //     // Simple ASCII visualization
-    //     for(int i=0; i<MAZE_SIZE; i++) {
-    //         // North walls
-    //         for(int j=0; j<MAZE_SIZE; j++) {
-    //             Serial.print("+");
-    //             Serial.print(grid[i][j].walls[NORTH] ? "---" : "   ");
-    //         }
-    //         Serial.println("+");
-            
-    //         // West walls and cell content
-    //         for(int j=0; j<MAZE_SIZE; j++) {
-    //             Serial.print(grid[i][j].walls[WEST] ? "|" : " ");
-    //             Serial.print(grid[i][j].visited ? " X " : " . ");
-    //         }
-    //         Serial.println(grid[i][MAZE_SIZE-1].walls[EAST] ? "|" : " ");
-    //     }
-        
-    //     // Bottom walls
-    //     for(int j=0; j<MAZE_SIZE; j++) {
-    //         Serial.print("+");
-    //         Serial.print(grid[MAZE_SIZE-1][j].walls[SOUTH] ? "---" : "   ");
-    //     }
-    //     Serial.println("+");
-    // }
+struct Maze {
+  Node* map[SIZE][SIZE];
 };
 
-class AutonomousMapper {
+class Mapping {
 public:
-    AutonomousMapper(Driving& drive, Turning& turn, EncoderOdometry& odom, uint8_t startRow, uint8_t startCol, uint8_t goalRow, uint8_t goalCol) 
-        : driver(drive), turner(turn), odometer(odom) {
-        maze.startRow = startRow;
-        maze.startCol = startCol;
-        maze.goalRow = goalRow;
-        maze.goalCol = goalCol;
-        maze.initialize();
+  Mapping(Driving& drive, mtrn3100::Turning& turn): driveController(drive), turnController(turn) {
+    maze = new_Maze();
+  }
+
+  // Create maze
+  Maze* new_Maze() {
+    Maze* m = new Maze;
+    short halfsize = SIZE / 2;
+
+    for (short x = 0; x < SIZE; ++x) {
+      for (short y = 0; y < SIZE; ++y) {
+        Node* n = new Node;
+        n->row = y;
+        n->column = x;
+        n->visited = false;
+        n->wallUp = n->wallDown = n->wallLeft = n->wallRight = false;
+        n->up = n->down = n->left = n->right = nullptr;
+
+        // Initial flood fill values (Manhattan distance to center)
+        if (x < halfsize && y < halfsize)
+          n->floodval = (halfsize - 1 - x) + (halfsize - 1 - y);
+        else if (x < halfsize && y >= halfsize)
+          n->floodval = (halfsize - 1 - x) + (y - halfsize);
+        else if (x >= halfsize && y < halfsize)
+          n->floodval = (x - halfsize) + (halfsize - 1 - y);
+        else
+          n->floodval = (x - halfsize) + (y - halfsize);
+
+        m->map[x][y] = n;
+      }
     }
-    
-    void exploreMaze() {
-        currentRow = maze.startRow;
-        currentCol = maze.startCol;
-        currentDir = NORTH;
-        
-        while(maze.completion < 95.0) { // Until mostly mapped
-            updateWalls();
-            
-            uint8_t nextDir = chooseNextDirection();
-            moveToCell(nextDir);
-            maze.updateCompletion();
-            //maze.display();
-            
-            delay(500); /
+
+    // Link neighbors
+    for (short x = 0; x < SIZE; ++x) {
+      for (short y = 0; y < SIZE; ++y) {
+        if (y > 0) m->map[x][y]->down = m->map[x][y - 1];
+        if (y < SIZE - 1) m->map[x][y]->up = m->map[x][y + 1];
+        if (x > 0) m->map[x][y]->left = m->map[x - 1][y];
+        if (x < SIZE - 1) m->map[x][y]->right = m->map[x + 1][y];
+      }
+    }
+
+    return m;
+  }
+
+  // Get smallest neighbor value (ignores walls)
+  short get_smallest_neighbor(Node* n) {
+    short smallest = LARGEVAL;
+    if (n->left && !n->wallLeft && n->left->floodval < smallest)
+      smallest = n->left->floodval;
+    if (n->right && !n->wallRight && n->right->floodval < smallest)
+      smallest = n->right->floodval;
+    if (n->down && !n->wallDown && n->down->floodval < smallest)
+      smallest = n->down->floodval;
+    if (n->up && !n->wallUp && n->up->floodval < smallest)
+      smallest = n->up->floodval;
+    return smallest;
+  }
+
+  void set_value(Node* n, short value) {
+    n->floodval = value;
+  }
+
+  // Update walls based on LIDAR readings
+  void update_walls(Node* n) {
+    driveController.updateLidar();
+    if (driveController.getFrontDist() < 50) n->wallUp = true;
+    if (driveController.getLeftDist() < 50) n->wallLeft = true;
+    if (driveController.getRightDist() < 50) n->wallRight = true;
+    // wallDown can be set when robot moves into new cell and marks behind
+  }
+
+  // Simple flood fill propagation
+  void propagate_floodfill() {
+    bool updated;
+    do {
+      updated = false;
+      for (short x = 0; x < SIZE; ++x) {
+        for (short y = 0; y < SIZE; ++y) {
+          Node* n = maze->map[x][y];
+          short minNeighbor = get_smallest_neighbor(n);
+          if (n->floodval != minNeighbor + 1) {
+            n->floodval = minNeighbor + 1;
+            updated = true;
+          }
         }
-        
-        returnToStart();
-    }
-    
-    void solveShortestPath() {
-        floodFill();
-        followShortestPath();
-    }
+      }
+    } while (updated);
+  }
+
+  // Decide next move based on flood values
+  char decide_next_move(Node* n) {
+    short smallest = get_smallest_neighbor(n);
+    if (n->up && !n->wallUp && n->up->floodval == smallest) return 'f';
+    if (n->left && !n->wallLeft && n->left->floodval == smallest) return 'l';
+    if (n->right && !n->wallRight && n->right->floodval == smallest) return 'r';
+    if (n->down && !n->wallDown && n->down->floodval == smallest) return 'b';
+    return 'x'; // no move
+  }
+
+  Maze* getMaze() { return maze; }
 
 private:
-    void updateWalls() {
-        Cell& current = maze.grid[currentRow][currentCol];
-        driver.updateLidar();
-        
-        // Front wall
-        if(driver.getFrontDist() < WALL_THRESHOLD) {
-            current.walls[currentDir] = true;
-        } else {
-            current.walls[currentDir] = false;
-        }
-        
-        // Right wall
-        if(driver.getRightDist() < WALL_THRESHOLD) {
-            current.walls[(currentDir + 1) % 4] = true;
-        } else {
-            current.walls[(currentDir + 1) % 4] = false;
-        }
-        
-        // Left wall
-        if(driver.getLeftDist() < WALL_THRESHOLD) {
-            current.walls[(currentDir + 3) % 4] = true;
-        } else {
-            current.walls[(currentDir + 3) % 4] = false;
-        }
-        
-        current.visited = true;
-    }
-    
-    uint8_t chooseNextDirection() {
-        Cell& current = maze.grid[currentRow][currentCol];
-        
-        // Check adjacent cells
-        bool canGoForward = !current.walls[currentDir];
-        bool canGoRight = !current.walls[(currentDir + 1) % 4];
-        bool canGoLeft = !current.walls[(currentDir + 3) % 4];
-        
-        // Prefer unvisited cells
-        if(canGoForward && isCellUnvisited(currentDir)) return currentDir;
-        if(canGoRight && isCellUnvisited((currentDir + 1) % 4)) return (currentDir + 1) % 4;
-        if(canGoLeft && isCellUnvisited((currentDir + 3) % 4)) return (currentDir + 3) % 4;
-        
-        // Default to wall follower (right-hand rule)
-        if(canGoRight) return (currentDir + 1) % 4;
-        if(canGoForward) return currentDir;
-        if(canGoLeft) return (currentDir + 3) % 4;
-        
-        // Dead end - turn around
-        return (currentDir + 2) % 4;
-    }
-    
-    bool isCellUnvisited(uint8_t dir) {
-        int8_t newRow = currentRow;
-        int8_t newCol = currentCol;
-        
-        switch(dir) {
-            case NORTH: newRow--; break;
-            case EAST: newCol++; break;
-            case SOUTH: newRow++; break;
-            case WEST: newCol--; break;
-        }
-        
-        if(newRow < 0 || newRow >= MAZE_SIZE || newCol < 0 || newCol >= MAZE_SIZE) {
-            return false;
-        }
-        
-        return !maze.grid[newRow][newCol].visited;
-    }
-    
-    void moveToCell(uint8_t dir) {
-        int8_t turnAngle = (dir - currentDir) * 90;
-        if(turnAngle > 180) turnAngle -= 360;
-        if(turnAngle < -180) turnAngle += 360;
-        
-        if(turnAngle != 0) {
-            turner.turn(turnAngle);
-            currentDir = dir;
-        }
-        
-        driver.drive(1);
-        
-        switch(currentDir) {
-            case NORTH: currentRow--; break;
-            case EAST: currentCol++; break;
-            case SOUTH: currentRow++; break;
-            case WEST: currentCol--; break;
-        }
-    }
-    
-    void floodFill() {
-        // Initialize distances
-        for(int i=0; i<MAZE_SIZE; i++) {
-            for(int j=0; j<MAZE_SIZE; j++) {
-                maze.grid[i][j].distance = UNVISITED_PENALTY;
-            }
-        }
-        
-        // Set goal cell distance to 0
-        maze.grid[maze.goalRow][maze.goalCol].distance = 0;
-        
-        // Propagate distances
-        bool changed;
-        do {
-            changed = false;
-            for(int i=0; i<MAZE_SIZE; i++) {
-                for(int j=0; j<MAZE_SIZE; j++) {
-                    if(maze.grid[i][j].distance == UNVISITED_PENALTY) continue;
-                    
-                    // Check all neighbors
-                    for(int d=0; d<4; d++) {
-                        if(!maze.grid[i][j].walls[d]) { // No wall in this direction
-                            int8_t ni = i, nj = j;
-                            switch(d) {
-                                case NORTH: ni--; break;
-                                case EAST: nj++; break;
-                                case SOUTH: ni++; break;
-                                case WEST: nj--; break;
-                            }
-                            
-                            if(ni >= 0 && ni < MAZE_SIZE && nj >= 0 && nj < MAZE_SIZE) {
-                                if(maze.grid[ni][nj].distance > maze.grid[i][j].distance + 1) {
-                                    maze.grid[ni][nj].distance = maze.grid[i][j].distance + 1;
-                                    changed = true;
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        } while(changed);
-    }
-    
-    void followShortestPath() {
-        currentRow = maze.startRow;
-        currentCol = maze.startCol;
-        currentDir = NORTH;
-        
-        while(currentRow != maze.goalRow || currentCol != maze.goalCol) {
-            Cell& current = maze.grid[currentRow][currentCol];
-            
-            uint8_t bestDir = currentDir;
-            uint16_t bestDist = current.distance;
-            
-            for(int d=0; d<4; d++) {
-                if(!current.walls[d]) { 
-                    int8_t ni = currentRow, nj = currentCol;
-                    switch(d) {
-                        case NORTH: ni--; break;
-                        case EAST: nj++; break;
-                        case SOUTH: ni++; break;
-                        case WEST: nj--; break;
-                    }
-                    
-                    if(ni >= 0 && ni < MAZE_SIZE && nj >= 0 && nj < MAZE_SIZE) {
-                        if(maze.grid[ni][nj].distance < bestDist) {
-                            bestDist = maze.grid[ni][nj].distance;
-                            bestDir = d;
-                        }
-                    }
-                }
-            }
-            
-            moveToCell(bestDir);
-            delay(500); 
-        }
-    }
-    
-    void returnToStart() {
-        // Simple implementation - could use flood fill to find path back
-        while(currentRow != maze.startRow || currentCol != maze.startCol) {
-            //// Implement function
-        }
-    }
-
-    MazeMap maze;
-    Driving& driver;
-    Turning& turner;
-    EncoderOdometry& odometer;
-    uint8_t currentRow;
-    uint8_t currentCol;
-    uint8_t currentDir;
+  mtrn3100::Driving& driveController;
+  mtrn3100::Turning& turnController;
+  Maze* maze;
 };
-
-} // namespace mtrn3100
+}

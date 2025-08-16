@@ -4,9 +4,14 @@
 #include "Driving.hpp"
 #include "Turning.hpp"
 
-#define SIZE 9          // 9x9 maze
+
+#define SIZE 9         
 #define LARGEVAL 255
-#define VISITED_FLAG 1
+
+#define START_X 0
+#define START_Y 0   // Set Start Coordinates
+#define GOAL_X 4        
+#define GOAL_Y 4   // Set Goal Coordinates
 
 namespace mtrn3100 {
 
@@ -24,14 +29,13 @@ struct Maze {
 
 class Mapping {
 public:
-  Mapping(Driving& drive, mtrn3100::Turning& turn): driveController(drive), turnController(turn) {
+  Mapping(mtrn3100::Driving& drive, mtrn3100::Turning& turn)
+    : driveController(drive), turnController(turn) {
     maze = new_Maze();
   }
 
-  // Create maze
   Maze* new_Maze() {
     Maze* m = new Maze;
-    short halfsize = SIZE / 2;
 
     for (short x = 0; x < SIZE; ++x) {
       for (short y = 0; y < SIZE; ++y) {
@@ -42,15 +46,7 @@ public:
         n->wallUp = n->wallDown = n->wallLeft = n->wallRight = false;
         n->up = n->down = n->left = n->right = nullptr;
 
-        // Initial flood fill values (Manhattan distance to center)
-        if (x < halfsize && y < halfsize)
-          n->floodval = (halfsize - 1 - x) + (halfsize - 1 - y);
-        else if (x < halfsize && y >= halfsize)
-          n->floodval = (halfsize - 1 - x) + (y - halfsize);
-        else if (x >= halfsize && y < halfsize)
-          n->floodval = (x - halfsize) + (halfsize - 1 - y);
-        else
-          n->floodval = (x - halfsize) + (y - halfsize);
+        n->floodval = abs(x - GOAL_X) + abs(y - GOAL_Y);
 
         m->map[x][y] = n;
       }
@@ -69,7 +65,6 @@ public:
     return m;
   }
 
-  // Get smallest neighbor value (ignores walls)
   short get_smallest_neighbor(Node* n) {
     short smallest = LARGEVAL;
     if (n->left && !n->wallLeft && n->left->floodval < smallest)
@@ -83,20 +78,13 @@ public:
     return smallest;
   }
 
-  void set_value(Node* n, short value) {
-    n->floodval = value;
-  }
-
-  // Update walls based on LIDAR readings
   void update_walls(Node* n) {
     driveController.updateLidar();
     if (driveController.getFrontDist() < 50) n->wallUp = true;
     if (driveController.getLeftDist() < 50) n->wallLeft = true;
     if (driveController.getRightDist() < 50) n->wallRight = true;
-    // wallDown can be set when robot moves into new cell and marks behind
   }
 
-  // Simple flood fill propagation
   void propagate_floodfill() {
     bool updated;
     do {
@@ -114,14 +102,13 @@ public:
     } while (updated);
   }
 
-  // Decide next move based on flood values
   char decide_next_move(Node* n) {
     short smallest = get_smallest_neighbor(n);
     if (n->up && !n->wallUp && n->up->floodval == smallest) return 'f';
     if (n->left && !n->wallLeft && n->left->floodval == smallest) return 'l';
     if (n->right && !n->wallRight && n->right->floodval == smallest) return 'r';
-    if (n->down && !n->wallDown && n->down->floodval == smallest) return 'b';
-    return 'x'; // no move
+    if (n->down && !n->wallDown && n->down->floodval == smallest) return 'rr'; // turn around
+    return 'x';
   }
 
   Maze* getMaze() { return maze; }
@@ -131,4 +118,5 @@ private:
   mtrn3100::Turning& turnController;
   Maze* maze;
 };
-}
+
+} 

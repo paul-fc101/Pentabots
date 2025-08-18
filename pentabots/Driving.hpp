@@ -117,7 +117,7 @@ public:
     int getLeftDist() { return li_L; }
 
 
-    void drive(int numCells) {
+    void drive(float numCells) {
         // SETUP
         encoderOdometer.update(encoder.getLeftRotation(), encoder.getRightRotation());
         float leftDist = encoder.getLeftDistance(WHEEL_DIAM / 2.0);

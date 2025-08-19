@@ -9,6 +9,8 @@
 #include <MPU6050_light.h>
 #include <VL6180X.h>
 #include "string.h"
+//#include <U8g2lib.h>
+
 
 #define MOT1PWM 9
 #define MOT1DIR 10
@@ -28,6 +30,14 @@
 
 #define RANGE 1
 
+struct Cell {
+  bool northWall = false;
+  bool eastWall = false;
+  bool southWall = false; 
+  bool westWall = false;
+};
+
+Cell grid[9][9];
 
 // Initalise
 mtrn3100::Motor motor(MOT1PWM, MOT1DIR);
@@ -70,6 +80,8 @@ void MovementString(String command) {
 void setup() {
   Serial.begin(9600);
 
+   // No need to call Wire.begin() separately, U8g2 handles it.
+
   Wire.begin();
   delay(300);
   turnController.attachMPU();
@@ -79,7 +91,6 @@ void setup() {
   driveController.initalise_lidar();
 
   turnController.getLidar(FrontSensor, LeftSensor, RightSensor);
-  
 
   //Uncomment for Task 3.2
   //turnController.turn(90);
@@ -87,9 +98,10 @@ void setup() {
   // Task 3.3
   MovementString(F("ffrflflfffflflfrfflffl"));
 
-  // Task 4.3
 
 }
+
+// This function handles all the logic for defining, building, and drawing the grid.
 
 bool isDriving = false;
 bool isTurning = true;

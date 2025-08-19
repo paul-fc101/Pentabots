@@ -21,22 +21,34 @@ struct Maze {
   Node* map[SIZE][SIZE];
 };
 
+struct Position { 
+    short x;
+    short y;
+
+    bool operator==(const Position& other) const {
+        return (x == other.x) && (y == other.y);
+    }
+};
+
 class Mapping {
 public:
 
+/*
   short currentX;
   short currentY;
   short startX = 0;
   short startY = 0;
   short goalX  = 4;   // Center cell for 9x9 maze
   short goalY  = 4;
-  
-  Mapping(mtrn3100::Driving& drive, mtrn3100::Turning& turn)
-    : driveController(drive), turnController(turn) {
-    maze = new_Maze();
+  */
 
-    currentX = startX;
-    currentY = startY;
+  Position start  = {0, 0};
+  Position goal   = {8, 8 };
+  Position current;
+  
+  Mapping(mtrn3100::Driving& drive, mtrn3100::Turning& turn): driveController(drive), turnController(turn) {
+    maze = new_Maze();
+    current = start;
 
     // Remove cells
     // Bottom Left
@@ -66,8 +78,10 @@ public:
         maze->map[x][y]->floodval = LARGEVAL;
       }
     }
-    maze->map[goalX][goalY]->floodval = 0;
+    maze->map[goal.x][goal.y]->floodval = 0;
   }
+
+
 
   Maze* new_Maze() {
     Maze* m = new Maze;
@@ -80,7 +94,7 @@ public:
         n->wallUp = n->wallDown = n->wallLeft = n->wallRight = false;
         n->up = n->down = n->left = n->right = nullptr;
 
-        n->floodval = abs(x - goalX) + abs(y - goalY);
+        n->floodval = abs(x - goal.x) + abs(y - goal.y);
 
         m->map[x][y] = n;
       }
@@ -122,22 +136,24 @@ public:
 
 // loop Floodfill
   void propagate_floodfill() {
-    bool updated;
-    do {
-      updated = false;
-      for (short x = 0; x < SIZE; ++x) {
-        for (short y = 0; y < SIZE; ++y) {
-          Node* n = maze->map[x][y];
-          if (x == goalX && y == goalY) continue; // goal always 0
-          short minNeighbor = get_smallest_neighbor(n);
-          if (n->floodval != minNeighbor + 1) {
-            n->floodval = minNeighbor + 1;
-            updated = true;
-          }
-        }
-      }
-    } while (updated);
-  }
+        bool updated;
+        do {
+            updated = false;
+            for (short x = 0; x < SIZE; ++x) {
+                for (short y = 0; y < SIZE; ++y) {
+                    Node* n = maze->map[x][y];
+                    if (x == goal.x && y == goal.y) continue; // goal always 0
+                    short minNeighbor = get_smallest_neighbor(n);
+                    if (n->floodval != minNeighbor + 1) {
+                        n->floodval = minNeighbor + 1;
+                        updated = true;
+                    }
+                }
+            }
+        } 
+        while (updated);
+    }
+
 
   char decide_next_move(Node* n) {
     short smallest = get_smallest_neighbor(n);
@@ -149,16 +165,16 @@ public:
   }
 
   void update_position(char move) {
-    if (move == 'f') {        // forward
-    currentY += 1;          
-    } else if (move == 'lf') { // left
-    currentX -= 1;
-    } else if (move == 'rf') { // right
-    currentX += 1;
-    } else if (move == 'rrf') { // turn around/back
-    currentY -= 1;
+    if (move == 'f') {
+        current.y += 1;
+    } else if (move == 'lf') {
+        current.x -= 1;
+    } else if (move == 'rf') {
+        current.x += 1;
+    } else if (move == 'rrf') {
+        current.y -= 1;
     }
-  }
+}
 
 // Remove the cells that are not in the maze
   void remove_cell(short x, short y) {
@@ -174,8 +190,17 @@ public:
     n->floodval = LARGEVAL;
 }
 
+Position getStartPosition() const {
+    return start;
+}
 
+Position getGoalPosition() const {
+    return goal;
+}
 
+Position getCurrentPosition() const {
+    return current;
+}
 
   Maze* getMaze() { return maze; }
 

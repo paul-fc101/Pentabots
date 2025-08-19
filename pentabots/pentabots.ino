@@ -86,8 +86,9 @@ String ReversePath(String command) {
       reversed.concat('l');
     } else if (c == 'l') {
       reversed.concat('r');
-    } 
-    reversed.concat(c);
+    } else {
+      reversed.concat(c);
+    }
   }
   reversed.concat("rr");
   return reversed;

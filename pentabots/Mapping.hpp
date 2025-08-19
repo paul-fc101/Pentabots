@@ -42,11 +42,14 @@ public:
   short goalY  = 4;
   */
 
-  Position start  = {0, 0};
-  Position goal   = {8, 8 };
+  Position start;
+  Position goal;
   Position current;
   
-  Mapping(mtrn3100::Driving& drive, mtrn3100::Turning& turn): driveController(drive), turnController(turn) {
+  Mapping(mtrn3100::Driving& drive, mtrn3100::Turning& turn, Position home = {0, 0}, Position target = {8, 8}): driveController(drive), turnController(turn) {
+    start = home;
+    goal = target;
+    
     maze = new_Maze();
     current = start;
 
@@ -112,7 +115,7 @@ public:
     return m;
   }
 
-// Looks at all accessible neighboring cells (no wall between). Finds the smallest floodval among them.
+// Looks at all accessible neighbouring cells (no wall between). Finds the smallest floodval among them.
   short get_smallest_neighbor(Node* n) {
     short smallest = LARGEVAL;
     if (n->left && !n->wallLeft && n->left->floodval < smallest)

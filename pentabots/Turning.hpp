@@ -36,8 +36,6 @@ public:
     }
 
     void centerRobot() {
-        //centerVertically();
-        //delay(50);
         centerHorizontally();
         motor1.stop();
         motor2.stop();
@@ -50,53 +48,57 @@ public:
 
     void attachMPU() {
         byte status = mpu.begin();
-        Serial.print(F("MPU6050 status: "));
-        Serial.println(status);
+        // Serial.print(F("MPU6050 status: "));
+        // Serial.println(status);
         delay(200);
         mpu.calcOffsets();
         delay(200);
         float startAngle = mpu.getAngleZ();
         float imuStart = millis();
-        delay(500);
+        delay(1000);
         float endAngle = mpu.getAngleZ();
         float imuEnd = millis();
         
         drift = (endAngle - startAngle) / (imuEnd - imuStart);
     }
 
-    bool turningCorrection(bool isDriving) {
-      if (isDriving) {
-        return false;
-      }
-      mpu.update();
-      float elapsedTime = millis() - prevTime;
-      bool isChanging = true;
-      float ang = mpu.getAngleZ(); //+ drift * elapsedTime;
-      prevTime = millis();
+    // bool turningCorrection(bool isDriving) {
+    //   if (isDriving) {
+    //     return false;
+    //   }
+      
+    //   mpu.update();
+    //   float elapsedTime = millis() - prevTime;
+    //   bool isChanging = true;
+    //   float ang = mpu.getAngleZ();// + drift * elapsedTime;
+    //   Serial.println(ang);
+    //   Serial.println(desiredRot);
+    //   prevTime = millis();
+    //   Serial.println(desiredRot);
+    //   Serial.println(ang);
+    //   currRot = ang;
+    //   if (currRot < desiredRot - ROTTOL2) {
+    //     motor1.setPWM(ROTSPEED2);
+    //     motor2.setPWM(ROTSPEED2);
+    //   } else if (currRot > desiredRot + ROTTOL2) {
+    //     motor1.setPWM(-ROTSPEED2);
+    //     motor2.setPWM(-ROTSPEED2);
+    //   } else if (currRot < desiredRot - ROTTOL) {
+    //     motor1.setPWM(ROTSPEED);
+    //     motor2.setPWM(ROTSPEED);
+    //   } else if (currRot > desiredRot + ROTTOL) {
+    //     motor1.setPWM(-ROTSPEED);
+    //     motor2.setPWM(-ROTSPEED);
+    //   } else if ((currRot >= desiredRot - ROTTOL) && (currRot <= desiredRot + ROTTOL)) {
+    //     if (!isDriving) {
+    //       motor1.setPWM(0);
+    //       motor2.setPWM(0);
+    //     }
+    //     isChanging = false;
+    //   }
 
-      currRot = ang;
-      if (currRot < desiredRot - ROTTOL2) {
-        motor1.setPWM(ROTSPEED2);
-        motor2.setPWM(ROTSPEED2);
-      } else if (currRot > desiredRot + ROTTOL2) {
-        motor1.setPWM(-ROTSPEED2);
-        motor2.setPWM(-ROTSPEED2);
-      } else if (currRot < desiredRot - ROTTOL) {
-        motor1.setPWM(ROTSPEED);
-        motor2.setPWM(ROTSPEED);
-      } else if (currRot > desiredRot + ROTTOL) {
-        motor1.setPWM(-ROTSPEED);
-        motor2.setPWM(-ROTSPEED);
-      } else if ((currRot >= desiredRot - ROTTOL) && (currRot <= desiredRot + ROTTOL)) {
-        if (!isDriving) {
-          motor1.setPWM(0);
-          motor2.setPWM(0);
-        }
-        isChanging = false;
-      }
-
-      return isChanging;
-    }
+    //   return isChanging;
+    // }
 
     void turn(float angle) {
 
@@ -142,6 +144,13 @@ public:
         RightSensor = right;
     }
 
+    // void saveRot() {
+    //   mpu.update();
+    //   float elapsedTime = millis() - prevTime;
+    //   desiredRot = mpu.getAngleZ(); //+ drift * elapsedTime;
+    //   prevTime = millis();
+    // }
+
 private:
 
     void centerHorizontally() {
@@ -172,37 +181,6 @@ private:
         motor1.stop();
         motor2.stop();
     }
-
-    void centerVertically() {
-        // const float TARGET_DIST_FROM_WALL = 60.0;
-        // const float CENTER_TOLERANCE = 2.0;
-        // pidCenterV.zeroAndSetTarget(0, TARGET_DIST_FROM_WALL);
-
-        // long startTime = millis();
-        // while (millis() - startTime < 1500) {
-        //     float li_F = FrontSensor.readRangeSingleMillimeters();
-
-        //     if (li_F < 180) {
-        //         if (fabs(li_F - TARGET_DIST_FROM_WALL) < CENTER_TOLERANCE) {
-        //             motor1.stop();
-        //             motor2.stop();
-        //             return; // Success
-        //         }
-
-        //         float correction = pidCenterV.compute(li_F);
-        //         motor1.setTargetPWM(correction);
-        //         motor2.setTargetPWM(-correction); 
-        //     } else {
-        //         break;
-        //     }
-        //     motor1.update();
-        //     motor2.update();
-        //     delay(5);
-        // }
-        // motor1.stop();
-        // motor2.stop();
-    }
-
 
     void moveLeftForwardBack() {
       motor2.setPWM(-50);
@@ -253,6 +231,7 @@ private:
     VL6180X FrontSensor;
     VL6180X LeftSensor;
     VL6180X RightSensor;
+    float savedRot = 0;
 };
 }
 

@@ -6,17 +6,13 @@
 
 namespace mtrn3100 {
 
-// The motor class is a simple interface designed to assist in motor control
-// You may choose to impliment additional functionality in the future such as dual motor or speed control 
 class Motor {
 public:
-    Motor(uint8_t pwm_pin, uint8_t in2) :  pwm_pin(pwm_pin), dir_pin(in2) {
+    Motor(uint8_t pwm_pin, uint8_t in2, int motor) :  pwm_pin(pwm_pin), dir_pin(in2), motor(motor) {
         pinMode(pwm_pin, OUTPUT);
         pinMode(dir_pin, OUTPUT); 
     }
 
-    // This function outputs the desired motor direction and the PWM signal. 
-    // NOTE: a pwm signal > 255 could cause troubles as such ensure that pwm is clamped between 0 - 255.
 
     void setPWM(int16_t pwm) {
         if (pwm >  0) {
@@ -28,31 +24,40 @@ public:
         if (pwm > 255) {
             pwm = 255;
         }
-
         analogWrite(pwm_pin, abs(pwm));
+        
     }
 
     void setTargetPWM(int16_t pwm) {
-        target_pwm = pwm;
+
         // Clamp the target to a max of 255
-        if (target_pwm > 255) target_pwm = 255;
-        if (target_pwm < -255) target_pwm = -255;
-        update();
+        if (pwm > 255) pwm = 255;
+        if (pwm < -255) pwm = -255;
+        if ((pwm > 0 && pwm < target_pwm) || (pwm < 0 && pwm > target_pwm)) {
+            target_pwm = pwm;
+            setPWM(pwm);
+        } else {
+            target_pwm = pwm;
+            update();
+        }
     }
 
     void update() {
         if (current_pwm < target_pwm) {
             current_pwm += MAX_PWM_CHANGE_PER_UPDATE;
-            if (current_pwm > target_pwm) {
-                current_pwm = target_pwm;
-            }
         } else if (current_pwm > target_pwm) {
             current_pwm -= MAX_PWM_CHANGE_PER_UPDATE;
-            if (current_pwm < target_pwm) {
-                current_pwm = target_pwm;
-            }
+        }
+        if (current_pwm > 0 && current_pwm < 15) {
+            current_pwm = 15;
+        } else if (current_pwm < 0 && current_pwm > -15) {
+            current_pwm = 15;
         }
         setPWM(current_pwm);
+    }
+
+    void instantUpdate() {
+        analogWrite(pwm_pin, abs(current_pwm));
     }
 
     void stop() {
@@ -68,6 +73,7 @@ private:
     static const uint8_t MAX_PWM_CHANGE_PER_UPDATE = 30;
     int16_t target_pwm = 0;
     int16_t current_pwm = 0;
+    const int motor;
 };
 
 }  // namespace mtrn3100

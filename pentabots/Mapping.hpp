@@ -9,205 +9,212 @@
 
 namespace mtrn3100 {
 
+// --- OPTIMIZED NODE STRUCT ---
+// The boolean flags have been packed into a single byte ('flags') to save SRAM.
+// Helper functions are provided for easy access.
 struct Node {
-  short row, column;
-  short floodval;
-  bool visited;
-  bool wallUp, wallDown, wallLeft, wallRight;
-  Node *up, *down, *left, *right;
+  uint8_t row, column;       // coordinates
+  short floodval;          // floodfill value
+  uint8_t flags;           // Holds visited, wallUp, wallDown, wallLeft, wallRight
+
+  // --- Helper methods to get and set flags from the 'flags' byte ---
+  
+  // Bit 0: visited
+  bool getVisited() const { return (flags >> 0) & 1; }
+  void setVisited(bool val) { flags = (flags & ~0x01) | (val << 0); }
+
+  // Bit 1: wallUp
+  bool getWallUp() const { return (flags >> 1) & 1; }
+  void setWallUp(bool val) { flags = (flags & ~0x02) | (val << 1); }
+
+  // Bit 2: wallDown
+  bool getWallDown() const { return (flags >> 2) & 1; }
+  void setWallDown(bool val) { flags = (flags & ~0x04) | (val << 2); }
+  
+  // Bit 3: wallLeft
+  bool getWallLeft() const { return (flags >> 3) & 1; }
+  void setWallLeft(bool val) { flags = (flags & ~0x08) | (val << 3); }
+
+  // Bit 4: wallRight
+  bool getWallRight() const { return (flags >> 4) & 1; }
+  void setWallRight(bool val) { flags = (flags & ~0x10) | (val << 4); }
 };
+
 
 struct Maze {
-  Node* map[SIZE][SIZE];
+  Node map[SIZE][SIZE];
 };
 
-struct Position { 
-    short x;
-    short y;
+struct Position {
+  short x;
+  short y;
 
-    bool operator==(const Position& other) const {
-        return (x == other.x) && (y == other.y);
-    }
+  bool operator==(const Position& other) const {
+    return (x == other.x) && (y == other.y);
+  }
 };
 
 class Mapping {
 public:
 
-/*
   short currentX;
   short currentY;
   short startX = 0;
   short startY = 0;
   short goalX  = 4;   // Center cell for 9x9 maze
   short goalY  = 4;
-  */
 
-  Position start  = {0, 0};
-  Position goal   = {8, 8 };
-  Position current;
-  
-  Mapping(mtrn3100::Driving& drive, mtrn3100::Turning& turn): driveController(drive), turnController(turn) {
-    maze = new_Maze();
-    current = start;
+  bool reachedGoal() {
+    return getCurrentPosition() == getGoalPosition();
+}
 
-    // Remove cells
-    // Bottom Left
+  Mapping(mtrn3100::Driving& drive, mtrn3100::Turning& turn)
+    : driveController(drive), turnController(turn) {
+
+    initialize_maze();
+
+    currentX = startX;
+    currentY = startY;
+
+    // Remove the 4 corner cells
     remove_cell(0, 0);   
     remove_cell(1, 0);   
     remove_cell(0, 1);   
 
-    // Bottom Right
-    remove_cell(7, 0);   
+    remove_cell(7, 0);
     remove_cell(8, 0);   
     remove_cell(8, 1);  
 
-    // Top Left
     remove_cell(0, 7);   
     remove_cell(0, 8);   
     remove_cell(1, 8);  
 
-    // Top Right
     remove_cell(7, 8);   
     remove_cell(8, 7);   
     remove_cell(8, 8);  
 
-
-    // Initialize flood values: goal = 0, all others = LARGEVAL
+    // Initialize flood values
     for (short x = 0; x < SIZE; ++x) {
       for (short y = 0; y < SIZE; ++y) {
-        maze->map[x][y]->floodval = LARGEVAL;
+        maze.map[x][y].floodval = LARGEVAL;
       }
     }
-    maze->map[goal.x][goal.y]->floodval = 0;
+    maze.map[goalX][goalY].floodval = 0;
   }
 
-
-
-  Maze* new_Maze() {
-    Maze* m = new Maze;
+  void initialize_maze() {
     for (short x = 0; x < SIZE; ++x) {
       for (short y = 0; y < SIZE; ++y) {
-        Node* n = new Node;
-        n->row = y;
-        n->column = x;
-        n->visited = false;
-        n->wallUp = n->wallDown = n->wallLeft = n->wallRight = false;
-        n->up = n->down = n->left = n->right = nullptr;
+        Node& n = maze.map[x][y];
+        n.row = y;
+        n.column = x;
+        n.flags = 0; // This sets visited and all walls to false (0) at once.
 
-        n->floodval = abs(x - goal.x) + abs(y - goal.y);
-
-        m->map[x][y] = n;
+        // initialize to Manhattan distance
+        n.floodval = abs(x - goalX) + abs(y - goalY);
       }
     }
-
-// Link neighbors
-    for (short x = 0; x < SIZE; ++x) {
-      for (short y = 0; y < SIZE; ++y) {
-        if (y > 0) m->map[x][y]->down = m->map[x][y - 1];
-        if (y < SIZE - 1) m->map[x][y]->up = m->map[x][y + 1];
-        if (x > 0) m->map[x][y]->left = m->map[x - 1][y];
-        if (x < SIZE - 1) m->map[x][y]->right = m->map[x + 1][y];
-      }
-    }
-    return m;
   }
 
-// Looks at all accessible neighboring cells (no wall between). Finds the smallest floodval among them.
-  short get_smallest_neighbor(Node* n) {
+  // Get the smallest floodval among valid neighbors
+  short get_smallest_neighbor(short x, short y) {
     short smallest = LARGEVAL;
-    if (n->left && !n->wallLeft && n->left->floodval < smallest)
-      smallest = n->left->floodval;
-    if (n->right && !n->wallRight && n->right->floodval < smallest)
-      smallest = n->right->floodval;
-    if (n->down && !n->wallDown && n->down->floodval < smallest)
-      smallest = n->down->floodval;
-    if (n->up && !n->wallUp && n->up->floodval < smallest)
-      smallest = n->up->floodval;
+    
+    // Updated to use getter methods
+    if (x > 0 && !maze.map[x][y].getWallLeft())
+      smallest = min(smallest, maze.map[x-1][y].floodval);
+
+    if (x < SIZE-1 && !maze.map[x][y].getWallRight())
+      smallest = min(smallest, maze.map[x+1][y].floodval);
+
+    if (y > 0 && !maze.map[x][y].getWallDown())
+      smallest = min(smallest, maze.map[x][y-1].floodval);
+
+    if (y < SIZE-1 && !maze.map[x][y].getWallUp())
+      smallest = min(smallest, maze.map[x][y+1].floodval);
+
     return smallest;
   }
 
-// If a sensor sees something within 50mm, marks that side as a wall.
-  void update_walls(Node* n) {
+  // Update walls using lidar
+  void update_walls(short x, short y) {
+    Node& n = maze.map[x][y];
     driveController.updateLidar();
-    if (driveController.getFrontDist() < 50) n->wallUp = true;
-    if (driveController.getLeftDist() < 50) n->wallLeft = true;
-    if (driveController.getRightDist() < 50) n->wallRight = true;
+
+    // Updated to use setter methods
+    if (driveController.getFrontDist() < 150) n.setWallUp(true);
+    if (driveController.getLeftDist() < 100) n.setWallLeft(true);
+    if (driveController.getRightDist() < 100) n.setWallRight(true);
   }
 
-// loop Floodfill
+  // Floodfill propagation
   void propagate_floodfill() {
-        bool updated;
-        do {
-            updated = false;
-            for (short x = 0; x < SIZE; ++x) {
-                for (short y = 0; y < SIZE; ++y) {
-                    Node* n = maze->map[x][y];
-                    if (x == goal.x && y == goal.y) continue; // goal always 0
-                    short minNeighbor = get_smallest_neighbor(n);
-                    if (n->floodval != minNeighbor + 1) {
-                        n->floodval = minNeighbor + 1;
-                        updated = true;
-                    }
-                }
-            }
-        } 
-        while (updated);
-    }
+    bool updated;
+    do {
+      updated = false;
+      for (short x = 0; x < SIZE; ++x) {
+        for (short y = 0; y < SIZE; ++y) {
+          if (x == goalX && y == goalY) continue;
 
-
-  char decide_next_move(Node* n) {
-    short smallest = get_smallest_neighbor(n);
-    if (n->up && !n->wallUp && n->up->floodval == smallest) return 'f';
-    if (n->left && !n->wallLeft && n->left->floodval == smallest) return 'lf';
-    if (n->right && !n->wallRight && n->right->floodval == smallest) return 'rf';
-    if (n->down && !n->wallDown && n->down->floodval == smallest) return 'rrf'; // turn around
-    return 'x';
+          short minNeighbor = get_smallest_neighbor(x, y);
+          if (maze.map[x][y].floodval != minNeighbor + 1) {
+            maze.map[x][y].floodval = minNeighbor + 1;
+            updated = true;
+          }
+        }
+      }
+    } while (updated);
   }
 
-  void update_position(char move) {
-    if (move == 'f') {
-        current.y += 1;
-    } else if (move == 'lf') {
-        current.x -= 1;
-    } else if (move == 'rf') {
-        current.x += 1;
-    } else if (move == 'rrf') {
-        current.y -= 1;
+  // Decide the next move based on flood values
+  String decide_next_move(short x, short y) {
+    short smallest = get_smallest_neighbor(x, y);
+
+    // Updated to use getter methods
+    if (y < SIZE-1 && !maze.map[x][y].getWallUp() && maze.map[x][y+1].floodval == smallest) return "f";
+    if (x > 0 && !maze.map[x][y].getWallLeft() && maze.map[x-1][y].floodval == smallest) return "lf";
+    if (x < SIZE-1 && !maze.map[x][y].getWallRight() && maze.map[x+1][y].floodval == smallest) return "rf";
+    if (y > 0 && !maze.map[x][y].getWallDown() && maze.map[x][y-1].floodval == smallest) return "rrf";
+
+    return "x"; // no valid move
+  }
+
+  // Update robot position after a move
+  void update_position(const String& move) {
+    if (move == "f") {
+      currentY += 1;
+    } else if (move == "lf") {
+      currentX -= 1;
+    } else if (move == "rf") {
+      currentX += 1;
+    } else if (move == "rrf") {
+      currentY -= 1;
     }
-}
+  }
 
-// Remove the cells that are not in the maze
+  // Mark a cell as blocked
   void remove_cell(short x, short y) {
-    if (x < 0 || x >= SIZE || y < 0 || y >= SIZE) return; // safety check
-    Node* n = maze->map[x][y];
+    if (x < 0 || x >= SIZE || y < 0 || y >= SIZE) return;
 
-    // Treat the cell as fully blocked
-    n->wallUp = true;
-    n->wallDown = true;
-    n->wallLeft = true;
-    n->wallRight = true;
+    Node& n = maze.map[x][y];
+    // Updated to use setter methods
+    n.setWallUp(true);
+    n.setWallDown(true);
+    n.setWallLeft(true);
+    n.setWallRight(true);
+    n.floodval = LARGEVAL;
+  }
 
-    n->floodval = LARGEVAL;
-}
+  Position getStartPosition() { return {startX, startY}; }
+  Position getGoalPosition()  { return {goalX, goalY}; }
+  Position getCurrentPosition() { return {currentX, currentY}; }
 
-Position getStartPosition() const {
-    return start;
-}
-
-Position getGoalPosition() const {
-    return goal;
-}
-
-Position getCurrentPosition() const {
-    return current;
-}
-
-  Maze* getMaze() { return maze; }
+  Maze getMaze() { return maze; }
 
 private:
   mtrn3100::Driving& driveController;
   mtrn3100::Turning& turnController;
-  Maze* maze;
+  Maze maze;
 };
 
-} 
+} // namespace mtrn3100

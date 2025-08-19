@@ -25,6 +25,10 @@ public:
         //float current_value = input - zero_ref;
         error = setpoint - current_value;
 
+        if (error > 150) {
+            error = 150;
+        }
+
         integral += error * dt;
         if (integral > I_MAX) {
             integral = I_MAX;

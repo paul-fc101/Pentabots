@@ -78,17 +78,25 @@ void MovementString(String command) {
   }
 }
 
-String ReversePath(String command) {
+String ReversePath(String path) {
   String reversed = "rr";
-  for (int i = command.length - 1; i > -1; --i) {
-    char c = command.charAt(i);
-    if (c == 'r') {
-      reversed.concat('l');
-    } else if (c == 'l') {
+
+  // Work backwards through the string
+  for (int i = path.length() - 1; i >= 0; --i) {
+    char c = path.charAt(i);
+
+    if (c == 'f') {
+      // Forward is still forward when retracing
+      reversed.concat('f');
+    } 
+    else if (c == 'l') {
+      // Left turn becomes right turn
       reversed.concat('r');
-    } else {
-      reversed.concat(c);
-    }
+    } 
+    else if (c == 'r') {
+      // Right turn becomes left turn
+      reversed.concat('l');
+    } 
   }
   reversed.concat("rr");
   return reversed;

@@ -78,6 +78,21 @@ void MovementString(String command) {
   }
 }
 
+String ReversePath(String command) {
+  String reversed = "rr";
+  for (int i = 0; i < command.length(); ++i) {
+    char c = command.charAt(i);
+    if (c == 'r') {
+      reversed.concat('l');
+    } else if (c == 'l') {
+      reversed.concat('r');
+    } 
+    reversed.concat(c);
+  }
+  reversed.concat("rr");
+  return reversed;
+}
+
 void setup() {
   Serial.begin(9600);
 

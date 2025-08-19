@@ -80,7 +80,7 @@ void MovementString(String command) {
 
 String ReversePath(String command) {
   String reversed = "rr";
-  for (int i = 0; i < command.length(); ++i) {
+  for (int i = command.length - 1; i > -1; --i) {
     char c = command.charAt(i);
     if (c == 'r') {
       reversed.concat('l');

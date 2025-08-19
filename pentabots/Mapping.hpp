@@ -67,6 +67,13 @@ public:
   bool reachedGoal() {
     return getCurrentPosition() == getGoalPosition();
   }
+  void setVisited(short x, short y, bool val) {
+    maze.map[x][y].setVisited(val);
+  }
+
+  bool getVisited(short x, short y) {
+    return maze.map[x][y].getVisited();
+  }
 
   Mapping(mtrn3100::Driving& drive, mtrn3100::Turning& turn)
     : driveController(drive), turnController(turn) {
@@ -139,6 +146,7 @@ public:
   // Update walls using lidar
   void update_walls(short x, short y) {
     Node& n = maze.map[x][y];
+
     driveController.updateLidar();
 
     // Updated to use setter methods
@@ -171,10 +179,14 @@ public:
     short smallest = get_smallest_neighbor(x, y);
 
     // Updated to use getter methods
-    if (y < SIZE-1 && !maze.map[x][y].getWallUp() && maze.map[x][y+1].floodval == smallest) return "f";
-    if (x > 0 && !maze.map[x][y].getWallLeft() && maze.map[x-1][y].floodval == smallest) return "lf";
-    if (x < SIZE-1 && !maze.map[x][y].getWallRight() && maze.map[x+1][y].floodval == smallest) return "rf";
-    if (y > 0 && !maze.map[x][y].getWallDown() && maze.map[x][y-1].floodval == smallest) return "rrf";
+    if (y < SIZE-1 && !maze.map[x][y].getWallUp() && 
+        maze.map[x][y+1].floodval == smallest && !maze.map[x][y+1].getVisited()) return "f";
+    if (x > 0 && !maze.map[x][y].getWallLeft() && 
+        maze.map[x-1][y].floodval == smallest && !maze.map[x-1][y].getVisited()) return "lf";
+    if (x < SIZE-1 && !maze.map[x][y].getWallRight() && 
+        maze.map[x+1][y].floodval == smallest && !maze.map[x+1][y].getVisited()) return "rf";
+    if (y > 0 && !maze.map[x][y].getWallDown() && 
+        maze.map[x][y-1].floodval == smallest && !maze.map[x][y-1].getVisited()) return "rrf";
 
     return "x"; // no valid move
   }
@@ -190,7 +202,9 @@ public:
     } else if (move == "rrf") {
       currentY -= 1;
     }
-  }
+
+    maze.map[currentX][currentY].setVisited(true);
+}
 
   // Mark a cell as blocked
   void remove_cell(short x, short y) {

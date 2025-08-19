@@ -247,13 +247,13 @@ void searchMaze() {
   Serial.println("hello");
   Serial.println(mapper.reachedGoal());
   while (!mapper.reachedGoal()) {
-    Serial.println("yes");
+    //Serial.println("yes");
     auto pos = mapper.getCurrentPosition();
-        Serial.println("yes1");
+    mapper.setVisited(pos.x, pos.y, true);
+          //Serial.println("yes1");
     // 1. Update walls using lidar
     mapper.update_walls(pos.x, pos.y);
-          Serial.println("yes2");
-
+          //Serial.println("yes2");
 
     // 2. Decide next move 
     String move = mapper.decide_next_move(pos.x, pos.y);

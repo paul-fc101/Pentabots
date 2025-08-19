@@ -7,7 +7,7 @@
 #include <VL6180X.h>
 
 #include "Motor.hpp"
-#include "MovingAverageFilter.hpp"
+// #include "MovingAverageFilter.hpp"
 #include "PIDController.hpp"
 
 #define ROTTOL 1 // degrees
@@ -18,7 +18,7 @@
 #define RIGHT_CORRECT 1.031
 #define LEFT_CORRECT 1
 
-mtrn3100::MovingAverageFilter filterT;
+// mtrn3100::MovingAverageFilter filterT;
 
 namespace mtrn3100 {
 
@@ -62,43 +62,43 @@ public:
         drift = (endAngle - startAngle) / (imuEnd - imuStart);
     }
 
-    bool turningCorrection(bool isDriving) {
-      if (isDriving) {
-        return false;
-      }
+    // bool turningCorrection(bool isDriving) {
+    //   if (isDriving) {
+    //     return false;
+    //   }
       
-      mpu.update();
-      float elapsedTime = millis() - prevTime;
-      bool isChanging = true;
-      float ang = mpu.getAngleZ();// + drift * elapsedTime;
-      Serial.println(ang);
-      Serial.println(desiredRot);
-      prevTime = millis();
-      Serial.println(desiredRot);
-      Serial.println(ang);
-      currRot = ang;
-      if (currRot < desiredRot - ROTTOL2) {
-        motor1.setPWM(ROTSPEED2);
-        motor2.setPWM(ROTSPEED2);
-      } else if (currRot > desiredRot + ROTTOL2) {
-        motor1.setPWM(-ROTSPEED2);
-        motor2.setPWM(-ROTSPEED2);
-      } else if (currRot < desiredRot - ROTTOL) {
-        motor1.setPWM(ROTSPEED);
-        motor2.setPWM(ROTSPEED);
-      } else if (currRot > desiredRot + ROTTOL) {
-        motor1.setPWM(-ROTSPEED);
-        motor2.setPWM(-ROTSPEED);
-      } else if ((currRot >= desiredRot - ROTTOL) && (currRot <= desiredRot + ROTTOL)) {
-        if (!isDriving) {
-          motor1.setPWM(0);
-          motor2.setPWM(0);
-        }
-        isChanging = false;
-      }
+    //   mpu.update();
+    //   float elapsedTime = millis() - prevTime;
+    //   bool isChanging = true;
+    //   float ang = mpu.getAngleZ();// + drift * elapsedTime;
+    //   Serial.println(ang);
+    //   Serial.println(desiredRot);
+    //   prevTime = millis();
+    //   Serial.println(desiredRot);
+    //   Serial.println(ang);
+    //   currRot = ang;
+    //   if (currRot < desiredRot - ROTTOL2) {
+    //     motor1.setPWM(ROTSPEED2);
+    //     motor2.setPWM(ROTSPEED2);
+    //   } else if (currRot > desiredRot + ROTTOL2) {
+    //     motor1.setPWM(-ROTSPEED2);
+    //     motor2.setPWM(-ROTSPEED2);
+    //   } else if (currRot < desiredRot - ROTTOL) {
+    //     motor1.setPWM(ROTSPEED);
+    //     motor2.setPWM(ROTSPEED);
+    //   } else if (currRot > desiredRot + ROTTOL) {
+    //     motor1.setPWM(-ROTSPEED);
+    //     motor2.setPWM(-ROTSPEED);
+    //   } else if ((currRot >= desiredRot - ROTTOL) && (currRot <= desiredRot + ROTTOL)) {
+    //     if (!isDriving) {
+    //       motor1.setPWM(0);
+    //       motor2.setPWM(0);
+    //     }
+    //     isChanging = false;
+    //   }
 
-      return isChanging;
-    }
+    //   return isChanging;
+    // }
 
     void turn(float angle) {
 
@@ -144,12 +144,12 @@ public:
         RightSensor = right;
     }
 
-    void saveRot() {
-      mpu.update();
-      float elapsedTime = millis() - prevTime;
-      desiredRot = mpu.getAngleZ(); //+ drift * elapsedTime;
-      prevTime = millis();
-    }
+    // void saveRot() {
+    //   mpu.update();
+    //   float elapsedTime = millis() - prevTime;
+    //   desiredRot = mpu.getAngleZ(); //+ drift * elapsedTime;
+    //   prevTime = millis();
+    // }
 
 private:
 
@@ -231,7 +231,6 @@ private:
     VL6180X FrontSensor;
     VL6180X LeftSensor;
     VL6180X RightSensor;
-    float savedRot = 0;
 };
 }
 

@@ -7,7 +7,7 @@
 #include <VL6180X.h>
 
 #include "Motor.hpp"
-#include "MovingAverageFilter.hpp"
+// #include "MovingAverageFilter.hpp"
 
 #include "EncoderOdometry.hpp"
 #include "DualEncoder.hpp"
@@ -39,10 +39,10 @@ const int XSHUT_Front = A1;
 const int XSHUT_Right = A2;
 const int XSHUT_Left  = A0;
 
-mtrn3100::MovingAverageFilter filter;
-mtrn3100::MovingAverageFilter rightFilter;
-mtrn3100::MovingAverageFilter leftFilter;
-mtrn3100::MovingAverageFilter frontFilter;
+//mtrn3100::MovingAverageFilter filter;
+// mtrn3100::MovingAverageFilter rightFilter;
+// mtrn3100::MovingAverageFilter leftFilter;
+// mtrn3100::MovingAverageFilter frontFilter;
 
 namespace mtrn3100 {
 
@@ -100,7 +100,6 @@ public:
       LeftSensor.setTimeout(500);
       LeftSensor.setAddress(addressLeft);
       delay(300);
-      Serial.println(F("Sensors ready!"));
     }
 
     void updateLidar() {
@@ -241,28 +240,28 @@ public:
     }
 
     // This function remains unchanged.
-    bool drivingCorrection(bool isTurning) {
-      if (isTurning) {
-        return false;
-      }
-      uint16_t sensorValue = FrontSensor.readRangeSingleMillimeters() - 3;
-      uint16_t value = filter.average(sensorValue);
+    // bool drivingCorrection(bool isTurning) {
+    //   if (isTurning) {
+    //     return false;
+    //   }
+    //   uint16_t sensorValue = FrontSensor.readRangeSingleMillimeters() - 3;
+    //   uint16_t value = filter.average(sensorValue);
 
-      int pwm = 0;
+    //   int pwm = 0;
 
-      if (value > 103) {
-        pwm = value - 83;
-      } else if (value < 97) {
-        pwm = value - 117;
-      }
+    //   if (value > 103) {
+    //     pwm = value - 83;
+    //   } else if (value < 97) {
+    //     pwm = value - 117;
+    //   }
 
-      motor1.setPWM(pwm * RIGHT_CORRECT);
-      motor2.setPWM(-pwm * LEFT_CORRECT);
-      if (pwm == 0) {
-        return false;
-      }
-      return true;
-    }
+    //   motor1.setPWM(pwm * RIGHT_CORRECT);
+    //   motor2.setPWM(-pwm * LEFT_CORRECT);
+    //   if (pwm == 0) {
+    //     return false;
+    //   }
+    //   return true;
+    // }
   
 private:
     VL6180X& FrontSensor;
@@ -273,8 +272,8 @@ private:
     Motor motor1; // Right Motor
     Motor motor2; // Left Motor
     PIDController pidR, pidL;
-    int li_F;  
-    int li_R;
-    int li_L;
+    uint8_t li_F;  
+    uint8_t li_R;
+    uint8_t li_L;
 };
 }

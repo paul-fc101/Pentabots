@@ -35,19 +35,19 @@ public:
 
     // Helper function which to convert encoder count to radians
     float getLeftRotation() {
-        return (static_cast<float>(l_count) / counts_per_revolution_L ) * 2 * PI;
+        return (static_cast<float>(l_count) / counts_per_revolution ) * 2 * PI;
     }
 
     float getRightRotation() {
-        return (static_cast<float>(r_count) / counts_per_revolution_R ) * 2 * PI;
+        return (static_cast<float>(r_count) / counts_per_revolution ) * 2 * PI;
     }
 
     float getLeftDistance(float R) const {
-        return (2 * PI * R * static_cast<float>(l_count)) / counts_per_revolution_L;
+        return (2 * PI * R * static_cast<float>(l_count)) / counts_per_revolution;
     }
 
     float getRightDistance(float R) const {
-        return (2 * PI * R * static_cast<float>(r_count)) / counts_per_revolution_R;
+        return (2 * PI * R * static_cast<float>(r_count)) / counts_per_revolution;
     }
 
 
@@ -68,8 +68,7 @@ public:
     const uint8_t mot1_int,mot1_dir,mot2_int,mot2_dir;
     volatile int8_t direction;
     float position = 0;
-    uint16_t counts_per_revolution_L = 700;
-    uint16_t counts_per_revolution_R = 700;
+    uint16_t counts_per_revolution = 700;
     volatile long l_count = 0;
     volatile long r_count = 0;
     uint32_t prev_time;

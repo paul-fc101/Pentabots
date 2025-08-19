@@ -11,12 +11,12 @@
 #include "PIDController.hpp"
 
 #define ROTTOL 1 // degrees
-#define ROTTOL2 10 // degrees
-#define ROTSPEED 30
-#define ROTSPEED2 70
+// #define ROTTOL2 10 // degrees
+// #define ROTSPEED 30
+// #define ROTSPEED2 70
 
-#define RIGHT_CORRECT 1.031
-#define LEFT_CORRECT 1
+// #define RIGHT_CORRECT 1.031
+// #define LEFT_CORRECT 1
 
 // mtrn3100::MovingAverageFilter filterT;
 
@@ -172,9 +172,11 @@ private:
         }
         if (li_R < WALL_MAX_DIST || li_L < WALL_MAX_DIST ) {
           if (li_R <= 35) {
-            moveLeftForwardBack();
+            moveForwardBack(1); // Left
+            // moveLeftForwardBack();
           } else if (li_L <= 35) {
-            moveRightForwardBack();
+            moveForwardBack(-1); // Right
+            // moveLeftForwardBack();
           }
         }
 
@@ -182,39 +184,44 @@ private:
         motor2.stop();
     }
 
-    void moveLeftForwardBack() {
+  void moveForwardBack(int direction) { // direction: 1 for left, -1 for right
       motor2.setPWM(-50);
       motor1.setPWM(50);
       delay(300);
-      motor1.setPWM(50);
-      motor2.setPWM(50);
+      motor1.setPWM(50 * -direction); // Move forward or backward
+      motor2.setPWM(50 * -direction);
       delay(400);
-      motor2.setPWM(-50);
-      motor1.setPWM(0);
-      delay(720);
-      motor2.setPWM(50);
+      if (direction == 1) { // Left-specific moves
+          motor2.setPWM(-50);
+          motor1.setPWM(0);
+          delay(720);
+      } else { // Right-specific moves
+          motor1.setPWM(50);
+          motor2.setPWM(0);
+          delay(720);
+      }
       motor1.setPWM(-50);
+      motor2.setPWM(50);
       delay(600);
-      motor1.setPWM(0);
-      motor2.setPWM(0);
-    }
+      motor1.stop();
+      motor2.stop();
+  }
 
-    void moveRightForwardBack() {
-      motor2.setPWM(-50);
-      motor1.setPWM(50);
-      delay(300);
-      motor1.setPWM(-50);
-      motor2.setPWM(-50);
-      delay(400);
-      motor1.setPWM(50);
-      motor2.setPWM(0);
-      delay(720);
-      motor1.setPWM(-50);
-      motor2.setPWM(50);
-      delay(600);
-      motor1.setPWM(0);
-      motor2.setPWM(0);
-    }
+  // void moveLeftForwardBack() {
+  //   motor2.setPWM(-50); motor1.setPWM(50); delay(300);
+  //   motor1.setPWM(50); motor2.setPWM(50); delay(400);
+  //   motor2.setPWM(-50); motor1.setPWM(0); delay(720);
+  //   motor2.setPWM(50); motor1.setPWM(-50); delay(600);
+  //   motor1.setPWM(0); motor2.setPWM(0);
+  // }
+
+  // void moveRightForwardBack() {
+  //   motor2.setPWM(-50); motor1.setPWM(50); delay(300);
+  //   motor1.setPWM(-50); motor2.setPWM(-50); delay(400); // Difference is here
+  //   motor1.setPWM(50); motor2.setPWM(0);       // And here
+  //   motor1.setPWM(-50); motor2.setPWM(50); delay(600);
+  //   motor1.setPWM(0); motor2.setPWM(0);
+  // }
 
 
     MPU6050 mpu;

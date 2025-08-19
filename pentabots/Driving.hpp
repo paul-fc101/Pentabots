@@ -13,16 +13,16 @@
 #include "DualEncoder.hpp"
 #include "PIDController.hpp"
 
-#define WHEEL_DIAM 32
-#define WHEEL_BASE 91
-#define RIGHT_CORRECT 1.031
-#define LEFT_CORRECT 1
-#define DIST_TOLLERANCE 2
+// #define WHEEL_DIAM 32
+// #define WHEEL_BASE 91
+// #define RIGHT_CORRECT 1.031
+// #define LEFT_CORRECT 1
+// #define DIST_TOLLERANCE 2
 #define FINAL_DIST_TOLLERANCE 2
 #define CELL_DIST 180 // Distance for one cell
 #define STOP_DIST 45
-#define SHUTDOWN_DISTANCE 40.0 // Distance from target to start fading out wall correction
-#define PID_DEADBAND 1
+#define SHUTDOWN_DISTANCE 40 // Distance from target to start fading out wall correction
+// #define PID_DEADBAND 1
 #define MAX_CORRECTION 150
 
 // --- Wall Avoidance Tuning ---
@@ -35,9 +35,7 @@ const uint8_t addressRight = 0x56;
 const uint8_t addressLeft  = 0x58;
 
 // XSHUT (enable) pins for each sensor
-const int XSHUT_Front = A1;
-const int XSHUT_Right = A2;
-const int XSHUT_Left  = A0;
+
 
 //mtrn3100::MovingAverageFilter filter;
 // mtrn3100::MovingAverageFilter rightFilter;
@@ -48,7 +46,7 @@ namespace mtrn3100 {
 
 class Driving {
 public:
-    Driving(Motor mot1, Motor mot2, VL6180X& frontSen, VL6180X& leftSen, VL6180X& RightSens, DualEncoder& enc, EncoderOdometry& odom)
+    Driving(Motor mot1, Motor mot2, VL6180X& frontSen, VL6180X& leftSen, VL6180X& RightSens, DualEncoder& enc, EncoderOdometry& odom, uint8_t radius, uint8_t base)
         : 
           motor1(mot1), 
           motor2(mot2), 
@@ -58,13 +56,18 @@ public:
           encoder(enc), 
           encoderOdometer(odom), 
           pidL(PIDController(1.7, 0.08, 0.4)), 
-          pidR(PIDController(1.7, 0.08, 0.4))
+          pidR(PIDController(1.7, 0.08, 0.4)),
+          WHEEL_RADIUS(radius),
+          WHEEL_BASE(base)
     {
         motor1.setPWM(0);
         motor2.setPWM(0);
     }
 
     void initalise_lidar() {
+      const int XSHUT_Front = A1;
+      const int XSHUT_Right = A2;
+      const int XSHUT_Left  = A0;
       // Set XSHUT pins as outputs and keep sensors off initially
       pinMode(XSHUT_Front, OUTPUT);
       pinMode(XSHUT_Right, OUTPUT);
@@ -119,8 +122,8 @@ public:
     void drive(float numCells) {
         // SETUP
         encoderOdometer.update(encoder.getLeftRotation(), encoder.getRightRotation());
-        float leftDist = encoder.getLeftDistance(WHEEL_DIAM / 2.0);
-        float rightDist = encoder.getRightDistance(WHEEL_DIAM / 2.0);
+        float leftDist = encoder.getLeftDistance(WHEEL_RADIUS);
+        float rightDist = encoder.getRightDistance(WHEEL_RADIUS);
         float targetDistance = CELL_DIST * numCells;
         
         // Set distance targets for each wheel
@@ -140,8 +143,8 @@ public:
             // SENSOR & PID UPDATES
             encoderOdometer.update(encoder.getLeftRotation(), encoder.getRightRotation());
             updateLidar();
-            leftDist = encoder.getLeftDistance(WHEEL_DIAM / 2.0);
-            rightDist = encoder.getRightDistance(WHEEL_DIAM / 2.0);
+            leftDist = encoder.getLeftDistance(WHEEL_RADIUS);
+            rightDist = encoder.getRightDistance(WHEEL_RADIUS);
             
             pidL.setpoint = targetEndL;
             pidR.setpoint = targetEndR;
@@ -153,8 +156,8 @@ public:
             if (correctionR > MAX_CORRECTION) correctionR = MAX_CORRECTION;
 
             // PID DEADBAND
-            if (fabs(pidL.getError()) < PID_DEADBAND) { correctionL = 0; }
-            if (fabs(pidR.getError()) < PID_DEADBAND) { correctionR = 0; }
+            if (fabs(pidL.getError()) < 1) { correctionL = 0; }
+            if (fabs(pidR.getError()) < 1) { correctionR = 0; }
             
             // Start with the base PWM values to go straight
             float pwm_R = correctionR;
@@ -272,8 +275,10 @@ private:
     Motor motor1; // Right Motor
     Motor motor2; // Left Motor
     PIDController pidR, pidL;
-    uint8_t li_F;  
-    uint8_t li_R;
-    uint8_t li_L;
+    int li_F;  
+    int li_R;
+    int li_L;
+    uint8_t WHEEL_RADIUS;
+    uint8_t WHEEL_BASE;
 };
 }

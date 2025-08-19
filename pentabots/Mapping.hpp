@@ -7,6 +7,8 @@
 #define SIZE 9         
 #define LARGEVAL 255
 
+enum Side { TOP, BOTTOM, LEFT, RIGHT };
+
 namespace mtrn3100 {
 
 // --- OPTIMIZED NODE STRUCT ---
@@ -55,12 +57,12 @@ struct Position {
 
 class Mapping {
 public:
-
+  // CHANGE HERE FOR START AND GOAL POSITIONS
   uint8_t currentX;
   uint8_t currentY;
   uint8_t startX = 3;
   uint8_t startY = 3;
-  uint8_t goalX  = 4;   // Center cell for 9x9 maze
+  uint8_t goalX  = 4;
   uint8_t goalY  = 4;
 
   Mapping(mtrn3100::Driving& drive, mtrn3100::Turning& turn)
@@ -88,10 +90,7 @@ public:
     remove_cell(8, 7);   
     remove_cell(8, 8);
 
-    remove_bottom_side();
-    remove_top_side();
-    remove_left_side();
-    remove_right_side();
+    remove_sides();
 
     // Initialize flood values
     for (uint8_t x = 0; x < SIZE; ++x) {
@@ -111,7 +110,7 @@ public:
 
   bool getVisited(uint8_t x, uint8_t y) {
     return maze.map[x][y].getVisited();
-  
+  }
 
   void initialize_maze() {
     for (uint8_t x = 0; x < SIZE; ++x) {
@@ -148,14 +147,46 @@ public:
   }
 
   // Update walls using lidar
-  void update_walls(uint8_t x, uint8_t y) {
+  // void update_walls(uint8_t x, uint8_t y) {
+  //   Node& n = maze.map[x][y];
+  //   driveController.updateLidar();
+
+  //   // Updated to use setter methods
+  //   if (driveController.getFrontDist() < 150) n.setWallUp(true);
+  //   if (driveController.getLeftDist() < 100) n.setWallLeft(true);
+  //   if (driveController.getRightDist() < 100) n.setWallRight(true);
+  // }
+
+  void update_walls(uint8_t x, uint8_t y, char orientation) {
     Node& n = maze.map[x][y];
     driveController.updateLidar();
 
-    // Updated to use setter methods
-    if (driveController.getFrontDist() < 150) n.setWallUp(true);
-    if (driveController.getLeftDist() < 100) n.setWallLeft(true);
-    if (driveController.getRightDist() < 100) n.setWallRight(true);
+    bool frontWall = driveController.getFrontDist() < 150;
+    bool leftWall = driveController.getLeftDist() < 100;
+    bool rightWall = driveController.getRightDist() < 100;
+
+    switch (orientation) {
+        case 'U': // Facing Up (Positive Y)
+            if (frontWall) n.setWallUp(true);
+            if (leftWall) n.setWallLeft(true);
+            if (rightWall) n.setWallRight(true);
+            break;
+        case 'R': // Facing Right (Positive X)
+            if (frontWall) n.setWallRight(true);
+            if (leftWall) n.setWallUp(true);
+            if (rightWall) n.setWallDown(true);
+            break;
+        case 'D': // Facing Down (Negative Y)
+            if (frontWall) n.setWallDown(true);
+            if (leftWall) n.setWallRight(true);
+            if (rightWall) n.setWallLeft(true);
+            break;
+        case 'L': // Facing Left (Negative X)
+            if (frontWall) n.setWallLeft(true);
+            if (leftWall) n.setWallDown(true);
+            if (rightWall) n.setWallUp(true);
+            break;
+    }
   }
 
   // Floodfill propagation
@@ -165,18 +196,32 @@ public:
       updated = false;
       for (uint8_t x = 0; x < SIZE; ++x) {
         for (uint8_t y = 0; y < SIZE; ++y) {
+          // The goal cell's value is always 0 and should never change.
           if (x == goalX && y == goalY) continue;
 
           uint8_t minNeighbor = get_smallest_neighbor(x, y);
-          if (maze.map[x][y].floodval != minNeighbor + 1) {
-            maze.map[x][y].floodval = minNeighbor + 1;
+          uint8_t newValue;
+
+          // --- FIX IS HERE ---
+          // If the smallest neighbor is LARGEVAL, this cell is unreachable.
+          // Its value should also be LARGEVAL.
+          if (minNeighbor == LARGEVAL) {
+              newValue = LARGEVAL;
+          } else {
+              // Otherwise, its value is one more than its best neighbor.
+              // This calculation is now safe from overflow.
+              newValue = minNeighbor + 1;
+          }
+
+          // Only update and set the flag if the value has actually changed.
+          if (maze.map[x][y].floodval != newValue) {
+            maze.map[x][y].floodval = newValue;
             updated = true;
           }
         }
       }
     } while (updated);
   }
-
   // Decide the next move based on flood values
   char decide_next_move(uint8_t x, uint8_t y) {
     uint8_t smallest = get_smallest_neighbor(x, y);
@@ -188,10 +233,10 @@ public:
     if (y > 0 && !maze.map[x][y].getWallDown() && maze.map[x][y-1].floodval == smallest) return 'D';
 
     return 'X'; // No valid move
-}
+  }
 
   // Update robot position after a move
-void update_position(char direction) {
+  void update_position(char direction) {
     if (direction == 'U') {
       currentY += 1; // Assuming Y increases upwards in your coordinate system
     } else if (direction == 'L') {
@@ -204,7 +249,7 @@ void update_position(char direction) {
     if (direction != 'X') {
         maze.map[currentX][currentY].setVisited(true);
     }
-}
+  }
 
   // Mark a cell as blocked
   void remove_cell(uint8_t x, uint8_t y) {
@@ -219,33 +264,18 @@ void update_position(char direction) {
     n.floodval = LARGEVAL;
   }
 
-  void remove_bottom_side() {
-    for (int x = 0; x < SIZE; x++) {
-      Node& n = maze.map[x][8];
-      n.setWallDown(true);
-    }
+  void remove_sides() {
+  for (int i = 0; i < SIZE; i++) {
+    // Top side
+    maze.map[i][0].setWallUp(true);
+    // Bottom side
+    maze.map[i][SIZE-1].setWallDown(true);
+    // Left side
+    maze.map[0][i].setWallLeft(true);
+    // Right side
+    maze.map[SIZE-1][i].setWallRight(true);
   }
-  void remove_top_side() {
-    for (int x = 0; x < SIZE; x++) {
-      Node& n = maze.map[x][0];
-      n.setWallUp(true);
-    }
-  }
-
-  void remove_left_side() {
-    for (int y = 0; y < SIZE; y++) {
-      Node& n = maze.map[0][y];
-      n.setWallLeft(true);
-    }
-  }
-
-  void remove_right_side() {
-    for (int y = 0; y < SIZE; y++) {
-      Node& n = maze.map[8][y];
-      n.setWallRight(true);
-    }
-  }
-
+}
 
   Position getStartPosition() { return {startX, startY}; }
   Position getGoalPosition()  { return {goalX, goalY}; }
@@ -258,4 +288,4 @@ private:
   Maze maze;
 };
 
-} // namespace mtrn3100
+}// namespace mtrn3100

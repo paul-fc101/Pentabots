@@ -5,7 +5,7 @@
 namespace mtrn3100 {
 class EncoderOdometry {
 public:
-    EncoderOdometry(float radius, float wheelBase) : x(0), y(0), h(0), R(radius), B(wheelBase), lastLPos(0), lastRPos(0) {}
+    EncoderOdometry(uint8_t radius, uint8_t wheelBase) : x(0), y(0), h(0), R(radius), B(wheelBase), lastLPos(0), lastRPos(0) {}
 
     void update(float leftValue, float rightValue) {
         float tL = leftValue - lastLPos; // MAKE SURE THE ENCODER COUNT UP CORRECTLY / ARE NOT THE WRONG DIRECTION 
@@ -42,7 +42,7 @@ public:
     }
 private:
     float x, y, h;
-    const float R, B;
+    const uint8_t R, B;
     float lastLPos, lastRPos;
 };
 

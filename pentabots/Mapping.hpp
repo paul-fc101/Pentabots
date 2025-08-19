@@ -73,7 +73,7 @@ public:
 
   bool getVisited(short x, short y) {
     return maze.map[x][y].getVisited();
-  }
+}
 
   Mapping(mtrn3100::Driving& drive, mtrn3100::Turning& turn)
     : driveController(drive), turnController(turn) {
@@ -179,17 +179,15 @@ public:
     short smallest = get_smallest_neighbor(x, y);
 
     // Updated to use getter methods
-    if (y < SIZE-1 && !maze.map[x][y].getWallUp() && 
-        maze.map[x][y+1].floodval == smallest && !maze.map[x][y+1].getVisited()) return "f";
-    if (x > 0 && !maze.map[x][y].getWallLeft() && 
-        maze.map[x-1][y].floodval == smallest && !maze.map[x-1][y].getVisited()) return "lf";
-    if (x < SIZE-1 && !maze.map[x][y].getWallRight() && 
-        maze.map[x+1][y].floodval == smallest && !maze.map[x+1][y].getVisited()) return "rf";
-    if (y > 0 && !maze.map[x][y].getWallDown() && 
-        maze.map[x][y-1].floodval == smallest && !maze.map[x][y-1].getVisited()) return "rrf";
+    if (y < SIZE-1 && !maze.map[x][y].getWallUp() && maze.map[x][y+1].floodval == smallest) return "f";
+    if (x > 0 && !maze.map[x][y].getWallLeft() && maze.map[x-1][y].floodval == smallest) return "lf";
+    if (x < SIZE-1 && !maze.map[x][y].getWallRight() && maze.map[x+1][y].floodval == smallest) return "rf";
+    if (y > 0 && !maze.map[x][y].getWallDown() && maze.map[x][y-1].floodval == smallest) return "rrf";
 
     return "x"; // no valid move
   }
+
+
 
   // Update robot position after a move
   void update_position(const String& move) {

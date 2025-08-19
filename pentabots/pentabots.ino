@@ -257,7 +257,7 @@ void searchMaze() {
 
     // 2. Decide next move 
     String move = mapper.decide_next_move(pos.x, pos.y);
-    Serial.println("no");
+    Serial.println(move);
 
     // 3. Update position
     mapper.update_position(move);

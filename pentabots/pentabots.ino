@@ -51,6 +51,7 @@ mtrn3100::EncoderOdometry encoderOdometer(WHEEL_DIAM / 2, WHEEL_BASE);
 mtrn3100::Driving driveController(motor, motor2, FrontSensor, LeftSensor, RightSensor, encoder, encoderOdometer);
 mtrn3100::Turning turnController(motor, motor2, mpu, FrontSensor, LeftSensor, RightSensor);
 mtrn3100::Mapping mapper(driveController, turnController);
+mtrn3100::Mapping home(driveController, turnController, {8, 8}, {0, 0});
 
 
 void MovementString(String command) {

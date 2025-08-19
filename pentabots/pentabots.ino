@@ -163,7 +163,7 @@ void setup() {
   MovementString(path);
 
 
-  drawMazeFromMapping();
+  //drawMazeFromMapping();
 
 
   //syncAndDrawMaze();
@@ -244,14 +244,20 @@ void loop() {
 //   oled.display(); // Show everything
 // }
 void searchMaze() {
+  Serial.println("hello");
+  Serial.println(mapper.reachedGoal());
   while (!mapper.reachedGoal()) {
+    Serial.println("yes");
     auto pos = mapper.getCurrentPosition();
-
+        Serial.println("yes1");
     // 1. Update walls using lidar
     mapper.update_walls(pos.x, pos.y);
+          Serial.println("yes2");
+
 
     // 2. Decide next move 
     String move = mapper.decide_next_move(pos.x, pos.y);
+    Serial.println("no");
 
     // 3. Update position
     mapper.update_position(move);

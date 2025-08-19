@@ -66,7 +66,7 @@ public:
 
   bool reachedGoal() {
     return getCurrentPosition() == getGoalPosition();
-}
+  }
 
   Mapping(mtrn3100::Driving& drive, mtrn3100::Turning& turn)
     : driveController(drive), turnController(turn) {

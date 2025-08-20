@@ -102,7 +102,9 @@ public:
       LeftSensor.configureDefault();
       LeftSensor.setTimeout(500);
       LeftSensor.setAddress(addressLeft);
+
       delay(300);
+      
     }
 
     void updateLidar() {

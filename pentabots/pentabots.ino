@@ -20,7 +20,7 @@
 #define WHEEL_RAD 16
 #define WHEEL_BASE 91
 
-#define MAX_PATH_LENGTH 5
+#define MAX_PATH_LENGTH 15
 char current_orientation = 'U'; // Start facing Up ('U', 'R', 'D', 'L')
 
 // #define RANGE 1
@@ -123,14 +123,8 @@ void setDrive(float val) {
 
 void setup() {
   Serial.begin(9600);
-  // pinMode(A1, OUTPUT);
-  // pinMode(A2, OUTPUT);
-  // pinMode(A0, OUTPUT);
-  // digitalWrite(A1, LOW);
-  // digitalWrite(A2, LOW);
-  // digitalWrite(A0, LOW);
   delay(300);       
-  Serial.println("0");
+  // Serial.println("0");
   Wire.begin();
   delay(300);
   // Serial.println("1");
@@ -148,7 +142,7 @@ void setup() {
   delay(50);
   // Serial.println("5");
   turnController.getLidar(FrontSensor, LeftSensor, RightSensor);
-  Serial.println("6");
+  // Serial.println("6");
   // // Task 3.3
   // // //MovementString("ffffflfffbfbfafrfbfflff");
   // // //MovementString("fffff");
@@ -159,20 +153,13 @@ void setup() {
   // // // Task 4.3
   drawMazeFromMapping();
   searchMaze();
-  Serial.println("7");
+  // Serial.println("7");
 
   char path[MAX_PATH_LENGTH];
   char reversed_path[MAX_PATH_LENGTH];
 
   generatePath(path, MAX_PATH_LENGTH);
   ReversePath(path, reversed_path, MAX_PATH_LENGTH);
-  // // Serial.print("path len: "); Serial.println(strlen(path));
-  // // Serial.print("rev len: ");  Serial.println(strlen(reversed_path));
-
-
-  // // Serial.print("free RAM: "); Serial.println(freeMemory());
-  // // Serial.println(path);
-  // // Serial.println(reversed_path);
   
   MovementString(reversed_path);
   MovementString(path);
@@ -269,20 +256,20 @@ void drawMazeFromMapping() {
         if (node.getWallRight()) u8g2.drawLine(x1, y0, x1, y1); // right
         if (node.getWallDown())  u8g2.drawLine(x0, y1, x1, y1); // bottom
         if (node.getWallLeft())  u8g2.drawLine(x0, y0, x0, y1); // left
-        // if (node.getVisited()) {
-        //     u8g2.drawPixel(x0 + cellSize / 2, y0 + cellSize / 2);
-        // }
+        if (node.getVisited()) {
+            u8g2.drawPixel(x0 + cellSize / 2, y0 + cellSize / 2);
+        }
       }
     }
 
-    // Start: hollow circle
+    // // Start: hollow circle
     // u8g2.drawCircle(start_cx, start_cy, maxRadius, U8G2_DRAW_ALL);
 
     // Current: small filled dot (so it is visible and fits inside circles)
     u8g2.drawBox(curr_cx - dotHalf, curr_cy - dotHalf, dotHalf * 2 + 1, dotHalf * 2 + 1);
 
-    // Goal: hollow circle
-    u8g2.drawCircle(goal_cx, goal_cy, maxRadius, U8G2_DRAW_ALL);
+    // // Goal: hollow circle
+    // u8g2.drawCircle(goal_cx, goal_cy, maxRadius, U8G2_DRAW_ALL);
 
     // Completion text
     char completion_buffer[8];
@@ -290,9 +277,9 @@ void drawMazeFromMapping() {
     itoa(percentage, completion_buffer, 10);
 
     // u8g2.setFont(u8g2_font_5x7_tn);
-    // u8g2.setFont(u8g2_font_5x7_tr);
-    // // u8g2.drawStr(gridDimension + 4, 10, "Complete:");
-    // u8g2.drawStr(gridDimension + 4, 24, completion_buffer);
+    u8g2.setFont(u8g2_font_5x7_tn);
+    // u8g2.drawStr(gridDimension + 4, 10, "Complete:");
+    u8g2.drawStr(gridDimension + 4, 24, completion_buffer);
     // u8g2.drawStr(gridDimension + 4 + u8g2.getStrWidth(completion_buffer) + 2, 24, "%");
 
   } while (u8g2.nextPage());
@@ -302,16 +289,16 @@ void drawMazeFromMapping() {
 void searchMaze() {
   while (!mapper.reachedGoal()) {
     mtrn3100::Position pos = mapper.getCurrentPosition();
-    Serial.println(pos.x);
-    Serial.println(pos.y);
+    // Serial.println(pos.x);
+    // Serial.println(pos.y);
     numVisited++;
     mapper.update_walls(pos.x, pos.y, current_orientation);
     drawMazeFromMapping();
     mapper.propagate_floodfill();
     char next_move = mapper.decide_next_move(pos.x, pos.y);
-    Serial.println(next_move);
+    // Serial.println(next_move);
     const char* command = getMovementCommand(current_orientation, next_move);
-    Serial.println(command);
+    // Serial.println(command);
     MovementString(command);
     mapper.update_position(next_move);
     current_orientation = next_move;
@@ -387,9 +374,9 @@ void ReversePath(const char* original_path, char* reversed_path, int buffer_size
 uint8_t orientationToIndex(char orientation) {
     switch (orientation) {
         case 'U': return 0;
-        case 'L': return 1;
+        case 'R': return 1;
         case 'D': return 2;
-        case 'R': return 3;
+        case 'L': return 3;
     }
     return 4; // Should not happen
 }
@@ -398,8 +385,8 @@ const char* getMovementCommand(char current, char target) {
     if (current == target) {
         return "f"; // No turn needed
     }
-    Serial.println(current);
-    Serial.println(target);
+    // Serial.println(current);
+    // Serial.println(target);
 
     uint8_t currentIndex = orientationToIndex(current);
     uint8_t targetIndex = orientationToIndex(target);
@@ -418,150 +405,3 @@ const char* getMovementCommand(char current, char target) {
         return "rrf"; // Turn 180, then forward
     }
 }
-
-// void generatePath(char* path_buffer, int buffer_size) {
-//   int idx = 0;
-//   current_orientation = 'U';
-
-//   auto start = mapper.getStartPosition();
-//   auto goal  = mapper.getGoalPosition();
-//   uint8_t simX = start.x;
-//   uint8_t simY = start.y;
-
-//   while (!(simX == goal.x && simY == goal.y)) {
-//     char next_direction = mapper.decide_next_move(simX, simY);
-//     if (next_direction == 'X') break;
-
-//     // Directly write commands into buffer (avoid strcat/strlen)
-//   if (current_orientation == 'U') {
-//     if (next_direction == 'U') { if (idx < buffer_size-1) path_buffer[idx++] = 'f'; }
-//     else if (next_direction == 'L') { if (idx < buffer_size-2) { path_buffer[idx++]='l'; path_buffer[idx++]='f'; } }
-//     else if (next_direction == 'R') { if (idx < buffer_size-2) { path_buffer[idx++]='r'; path_buffer[idx++]='f'; } }
-//     else if (next_direction == 'D') { if (idx < buffer_size-3) { path_buffer[idx++]='r'; path_buffer[idx++]='r'; path_buffer[idx++]='f'; } }
-
-//   } else if (current_orientation == 'L') {
-//     if (next_direction == 'L') { if (idx < buffer_size-1) path_buffer[idx++] = 'f'; }
-//     else if (next_direction == 'D') { if (idx < buffer_size-2) { path_buffer[idx++]='l'; path_buffer[idx++]='f'; } }
-//     else if (next_direction == 'U') { if (idx < buffer_size-2) { path_buffer[idx++]='r'; path_buffer[idx++]='f'; } }
-//     else if (next_direction == 'R') { if (idx < buffer_size-3) { path_buffer[idx++]='r'; path_buffer[idx++]='r'; path_buffer[idx++]='f'; } }
-
-//   } else if (current_orientation == 'R') {
-//     if (next_direction == 'R') { if (idx < buffer_size-1) path_buffer[idx++] = 'f'; }
-//     else if (next_direction == 'U') { if (idx < buffer_size-2) { path_buffer[idx++]='l'; path_buffer[idx++]='f'; } }
-//     else if (next_direction == 'D') { if (idx < buffer_size-2) { path_buffer[idx++]='r'; path_buffer[idx++]='f'; } }
-//     else if (next_direction == 'L') { if (idx < buffer_size-3) { path_buffer[idx++]='r'; path_buffer[idx++]='r'; path_buffer[idx++]='f'; } }
-
-//   } else if (current_orientation == 'D') {
-//     if (next_direction == 'D') { if (idx < buffer_size-1) path_buffer[idx++] = 'f'; }
-//     else if (next_direction == 'R') { if (idx < buffer_size-2) { path_buffer[idx++]='l'; path_buffer[idx++]='f'; } }
-//     else if (next_direction == 'L') { if (idx < buffer_size-2) { path_buffer[idx++]='r'; path_buffer[idx++]='f'; } }
-//     else if (next_direction == 'U') { if (idx < buffer_size-3) { path_buffer[idx++]='r'; path_buffer[idx++]='r'; path_buffer[idx++]='f'; } }
-//   }
-
-//     current_orientation = next_direction;
-
-//     // Update simulated position
-//     if (next_direction == 'U') simY++;
-//     else if (next_direction == 'L') simX--;
-//     else if (next_direction == 'R') simX++;
-//     else if (next_direction == 'D') simY--;
-//   }
-//   path_buffer[idx] = '\0';
-// }
-
-// void ReversePath(const char* original_path, char* reversed_path, int buffer_size) {
-//   int idx = 0;
-
-//   // Start with 180 turn
-//   if (idx < buffer_size-2) {
-//     reversed_path[idx++] = 'r';
-//     reversed_path[idx++] = 'r';
-//   }
-
-//   int len = strlen(original_path);
-//   for (int i = len - 1; i >= 0 && idx < buffer_size-1; --i) {
-//     char c = original_path[i];
-//     if (c == 'f') reversed_path[idx++] = 'f';
-//     else if (c == 'l') reversed_path[idx++] = 'r';
-//     else if (c == 'r') reversed_path[idx++] = 'l';
-//   }
-
-//   // Final 180 turn
-//   if (idx < buffer_size-2) {
-//     reversed_path[idx++] = 'r';
-//     reversed_path[idx++] = 'r';
-//   }
-//   reversed_path[idx] = '\0';
-// }
-
-
-
-// void generatePath(char* path_buffer, int buffer_size) {
-//   int idx = 0;  
-//   char sim_orientation = 'U'; // start facing up
-
-//   mtrn3100::Position start = mapper.getStartPosition();
-//   mtrn3100::Position goal  = mapper.getGoalPosition();
-//   uint8_t simX = start.x;
-//   uint8_t simY = start.y;
-
-//   path_buffer[0] = '\0';
-
-//   while (!(simX == goal.x && simY == goal.y)) {
-//     char next_direction = mapper.decide_next_move(simX, simY);
-//     if (next_direction == 'X') break; // no path
-
-//     // Get movement command
-//     const char* command = getMovementCommand(sim_orientation, next_direction);
-
-//     // Append to buffer safely
-//     for (int j = 0; command[j] != '\0'; j++) {
-//       if (idx < buffer_size - 1) {
-//         path_buffer[idx++] = command[j];
-//       } else {
-//         break; // buffer full
-//       }
-//     }
-//     path_buffer[idx] = '\0';
-
-//     // Update simulated position
-//     sim_orientation = next_direction;
-//     if (next_direction == 'U') simY++;
-//     else if (next_direction == 'L') simX--;
-//     else if (next_direction == 'R') simX++;
-//     else if (next_direction == 'D') simY--;
-//   }
-// }
-
-// void ReversePath(const char* original_path, char* reversed_path, int buffer_size) {
-//   int idx = 0;
-
-//   // Start with 180 turn
-//   if (idx + 2 < buffer_size) {
-//     reversed_path[idx++] = 'r';
-//     reversed_path[idx++] = 'r';
-//   }
-
-//   int len = strlen(original_path);
-//   for (int i = len - 1; i >= 0; --i) {
-//     char to_add = '\0';
-//     switch (original_path[i]) {
-//       case 'f': to_add = 'f'; break;
-//       case 'l': to_add = 'r'; break;
-//       case 'r': to_add = 'l'; break;
-//     }
-
-//     if (to_add && idx < buffer_size - 1) {
-//       reversed_path[idx++] = to_add;
-//     }
-//   }
-
-//   // Final 180 turn
-//   if (idx + 2 < buffer_size) {
-//     reversed_path[idx++] = 'r';
-//     reversed_path[idx++] = 'r';
-//   }
-
-//   reversed_path[idx] = '\0';
-// }
-

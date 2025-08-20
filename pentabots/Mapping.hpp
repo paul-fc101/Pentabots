@@ -62,8 +62,8 @@ public:
   uint8_t currentY;
   uint8_t startX = 3;
   uint8_t startY = 3;
-  uint8_t goalX  = 4;
-  uint8_t goalY  = 4;
+  uint8_t goalX  = 3;
+  uint8_t goalY  = 8;
 
   Mapping(mtrn3100::Driving& drive, mtrn3100::Turning& turn)
     : driveController(drive), turnController(turn) {
@@ -131,7 +131,7 @@ public:
     uint8_t smallest = LARGEVAL;
     
     // Updated to use getter methods
-    if (x > 0 && !maze.map[x][y].getWallLeft())
+    if (x > 0 && !maze.map[x][y].getWallLeft()) 
       smallest = min(smallest, maze.map[x-1][y].floodval);
 
     if (x < SIZE-1 && !maze.map[x][y].getWallRight())
@@ -157,6 +157,39 @@ public:
   //   if (driveController.getRightDist() < 100) n.setWallRight(true);
   // }
 
+  // void update_walls(uint8_t x, uint8_t y, char orientation) {
+  //   Node& n = maze.map[x][y];
+  //   driveController.updateLidar();
+
+  //   bool frontWall = driveController.getFrontDist() < 150;
+  //   bool leftWall = driveController.getLeftDist() < 100;
+  //   bool rightWall = driveController.getRightDist() < 100;
+
+  //   switch (orientation) {
+  //       case 'U': // Facing Up (Positive Y)
+  //           if (frontWall) n.setWallUp(true);
+  //           if (leftWall) n.setWallLeft(true);
+  //           if (rightWall) n.setWallRight(true);
+  //           break;
+  //       case 'R': // Facing Right (Positive X)
+  //           if (frontWall) n.setWallRight(true);
+  //           if (leftWall) n.setWallUp(true);
+  //           if (rightWall) n.setWallDown(true);
+  //           break;
+  //       case 'D': // Facing Down (Negative Y)
+  //           if (frontWall) n.setWallDown(true);
+  //           if (leftWall) n.setWallRight(true);
+  //           if (rightWall) n.setWallLeft(true);
+  //           break;
+  //       case 'L': // Facing Left (Negative X)
+  //           if (frontWall) n.setWallLeft(true);
+  //           if (leftWall) n.setWallDown(true);
+  //           if (rightWall) n.setWallUp(true);
+  //           break;
+  //   }
+  // }
+
+
   void update_walls(uint8_t x, uint8_t y, char orientation) {
     Node& n = maze.map[x][y];
     driveController.updateLidar();
@@ -167,27 +200,63 @@ public:
 
     switch (orientation) {
         case 'U': // Facing Up (Positive Y)
-            if (frontWall) n.setWallUp(true);
-            if (leftWall) n.setWallLeft(true);
-            if (rightWall) n.setWallRight(true);
+            if (frontWall) {
+                n.setWallUp(true);
+                if (y > 0) maze.map[x][y - 1].setWallDown(true); // Add this
+            }
+            if (leftWall) {
+                n.setWallLeft(true);
+                if (x > 0) maze.map[x - 1][y].setWallRight(true); // Add this
+            }
+            if (rightWall) {
+                n.setWallRight(true);
+                if (x < SIZE - 1) maze.map[x + 1][y].setWallLeft(true); // Add this
+            }
             break;
         case 'R': // Facing Right (Positive X)
-            if (frontWall) n.setWallRight(true);
-            if (leftWall) n.setWallUp(true);
-            if (rightWall) n.setWallDown(true);
+            if (frontWall) {
+                n.setWallRight(true);
+                if (x < SIZE - 1) maze.map[x + 1][y].setWallLeft(true); // Add this
+            }
+            if (leftWall) {
+                n.setWallUp(true);
+                if (y > 0) maze.map[x][y - 1].setWallDown(true); // Add this
+            }
+            if (rightWall) {
+                n.setWallDown(true);
+                if (y < SIZE - 1) maze.map[x][y + 1].setWallUp(true); // Add this
+            }
             break;
         case 'D': // Facing Down (Negative Y)
-            if (frontWall) n.setWallDown(true);
-            if (leftWall) n.setWallRight(true);
-            if (rightWall) n.setWallLeft(true);
+            if (frontWall) {
+                n.setWallDown(true);
+                if (y < SIZE - 1) maze.map[x][y + 1].setWallUp(true); // Add this
+            }
+            if (leftWall) {
+                n.setWallRight(true);
+                if (x < SIZE - 1) maze.map[x + 1][y].setWallLeft(true); // Add this
+            }
+            if (rightWall) {
+                n.setWallLeft(true);
+                if (x > 0) maze.map[x - 1][y].setWallRight(true); // Add this
+            }
             break;
         case 'L': // Facing Left (Negative X)
-            if (frontWall) n.setWallLeft(true);
-            if (leftWall) n.setWallDown(true);
-            if (rightWall) n.setWallUp(true);
+            if (frontWall) {
+                n.setWallLeft(true);
+                if (x > 0) maze.map[x - 1][y].setWallRight(true); // Add this
+            }
+            if (leftWall) {
+                n.setWallDown(true);
+                if (y < SIZE - 1) maze.map[x][y + 1].setWallUp(true); // Add this
+            }
+            if (rightWall) {
+                n.setWallUp(true);
+                if (y > 0) maze.map[x][y - 1].setWallDown(true); // Add this
+            }
             break;
     }
-  }
+}
 
   // Floodfill propagation
   void propagate_floodfill() {
@@ -227,10 +296,10 @@ public:
     uint8_t smallest = get_smallest_neighbor(x, y);
 
     // 'U'p, 'L'eft, 'R'ight, 'D'own
-    if (y < SIZE-1 && !maze.map[x][y].getWallUp() && maze.map[x][y+1].floodval == smallest) return 'U';
+    if (y < SIZE-1 && !maze.map[x][y].getWallUp() && maze.map[x][y-1].floodval == smallest) return 'U';
     if (x > 0 && !maze.map[x][y].getWallLeft() && maze.map[x-1][y].floodval == smallest) return 'L';
     if (x < SIZE-1 && !maze.map[x][y].getWallRight() && maze.map[x+1][y].floodval == smallest) return 'R';
-    if (y > 0 && !maze.map[x][y].getWallDown() && maze.map[x][y-1].floodval == smallest) return 'D';
+    if (y > 0 && !maze.map[x][y].getWallDown() && maze.map[x][y+1].floodval == smallest) return 'D';
 
     return 'X'; // No valid move
   }
@@ -238,13 +307,13 @@ public:
   // Update robot position after a move
   void update_position(char direction) {
     if (direction == 'U') {
-      currentY += 1; // Assuming Y increases upwards in your coordinate system
+      currentY -= 1; // Assuming Y increases upwards in your coordinate system
     } else if (direction == 'L') {
       currentX -= 1;
     } else if (direction == 'R') {
       currentX += 1;
     } else if (direction == 'D') {
-      currentY -= 1;
+      currentY += 1;
     }
     if (direction != 'X') {
         maze.map[currentX][currentY].setVisited(true);
